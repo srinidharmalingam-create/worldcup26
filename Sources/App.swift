@@ -2,6 +2,19 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 
+/// Opens a URL in the default browser and brings the browser to the front.
+/// A plain `NSWorkspace.open` from a menu-bar-only (LSUIElement) app can load
+/// the page without activating the browser, which looks like nothing happened.
+func openInBrowser(_ url: URL) {
+    let config = NSWorkspace.OpenConfiguration()
+    config.activates = true
+    NSWorkspace.shared.open(url, configuration: config) { app, _ in
+        DispatchQueue.main.async {
+            app?.activate(options: [.activateIgnoringOtherApps])
+        }
+    }
+}
+
 @main
 struct WorldCupApp: App {
     @StateObject private var model: ScoreModel
@@ -205,7 +218,7 @@ struct CricketCard: View {
                     .background(.white.opacity(0.9), in: Circle())
                     .clipShape(Circle())
                     Button {
-                        if let url = side.siteURL { NSWorkspace.shared.open(url) }
+                        if let url = side.siteURL { openInBrowser(url) }
                     } label: {
                         Text(side.name)
                             .font(.system(.caption, design: .rounded)
@@ -259,7 +272,7 @@ struct CricketCard: View {
                 Spacer()
                 if let url = match.gamecastURL {
                     Button {
-                        NSWorkspace.shared.open(url)
+                        openInBrowser(url)
                     } label: {
                         Image(systemName: "arrow.up.right.square")
                     }
@@ -584,7 +597,7 @@ struct MatchCard: View {
             }
             if let url = match.gamecastURL {
                 Button {
-                    NSWorkspace.shared.open(url)
+                    openInBrowser(url)
                 } label: {
                     Image(systemName: "arrow.up.right.square")
                 }
@@ -613,7 +626,7 @@ struct MatchCard: View {
             .appendingPathComponent("wc26-\(match.id).ics")
         do {
             try ics.write(to: url, atomically: true, encoding: .utf8)
-            NSWorkspace.shared.open(url)
+            openInBrowser(url)
         } catch {
             NSSound.beep()
         }
@@ -753,7 +766,7 @@ struct TeamColumn: View {
                 lineWidth: isFavorite ? 1.5 : 1))
             HStack(spacing: 3) {
                 Button {
-                    if let url = side.siteURL { NSWorkspace.shared.open(url) }
+                    if let url = side.siteURL { openInBrowser(url) }
                 } label: {
                     Text(side.name)
                         .font(.system(.caption, design: .rounded).weight(.semibold))
