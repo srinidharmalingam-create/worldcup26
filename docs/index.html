@@ -140,7 +140,20 @@
     Data: ESPN · <a href="https://github.com/srinidharmalingam-create/worldcup26">Get the Mac menu bar app</a>
   </footer>
 </div>
+<script data-goatcounter="https://worldcup26sports.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script>
+// Privacy-friendly usage events (GoatCounter: no cookies, no personal data)
+function track(name) {
+  if (window.goatcounter && window.goatcounter.count) {
+    window.goatcounter.count({ path: name, event: true });
+  }
+}
+document.addEventListener("click", e => {
+  if (e.target.closest(".gc")) track("open-gamecast");
+  else if (e.target.closest(".tlink")) track("open-team-page");
+  else if (e.target.closest(".star")) track("toggle-favorite");
+});
+
 const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const API = `${SITE}/soccer/fifa.world`;
 const LEAGUES = [
@@ -166,6 +179,7 @@ leaguesNav.innerHTML = LEAGUES.map(l =>
 leaguesNav.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   state.league = b.dataset.lg;
+  track("league-" + b.dataset.lg);
   leaguesNav.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   document.getElementById("wctabs").style.display = state.league === "worldCup" ? "flex" : "none";
   render();
@@ -173,6 +187,7 @@ leaguesNav.addEventListener("click", e => {
 document.getElementById("wctabs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   state.tab = b.dataset.tab;
+  track("wc-tab-" + b.dataset.tab);
   document.querySelectorAll("#wctabs button").forEach(x => x.classList.toggle("on", x === b));
   render();
 });
