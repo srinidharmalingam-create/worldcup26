@@ -95,13 +95,16 @@ struct SBCompetitor: Decodable {
     let form: String?
     let team: SBTeam
 
-    enum CodingKeys: String, CodingKey { case homeAway, score, winner, form, team }
+    let linescores: [SBLineScore]?
+
+    enum CodingKeys: String, CodingKey { case homeAway, score, winner, form, team, linescores }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         homeAway = try? c.decode(String.self, forKey: .homeAway)
         form = try? c.decode(String.self, forKey: .form)
         team = try c.decode(SBTeam.self, forKey: .team)
+        linescores = try? c.decode([SBLineScore].self, forKey: .linescores)
         // score is a string in most sports but occasionally numeric
         if let s = try? c.decode(String.self, forKey: .score) { score = s }
         else if let d = try? c.decode(Double.self, forKey: .score) {
@@ -121,6 +124,10 @@ struct SBTeam: Decodable {
     let logo: String?
     let color: String?
     let links: [SBLink]?
+}
+
+struct SBLineScore: Decodable {
+    let value: Double?
 }
 
 struct SBStatus: Decodable {
@@ -261,6 +268,7 @@ struct TeamSide {
     let winner: Bool
     let form: String?
     let siteURL: URL?        // ESPN team page
+    let periods: [Int]       // line score per inning/quarter/period
 }
 
 struct Match: Identifiable {
@@ -304,6 +312,77 @@ struct BracketRound: Identifiable {
     let slug: String
     let title: String
     let matches: [Match]
+}
+
+// MARK: - US league standings / scorers / views
+
+struct USRow: Identifiable {
+    let id: String
+    let name: String
+    let logoURL: URL?
+    let wins: Int
+    let losses: Int
+    let pct: String
+    let gamesBehind: String
+}
+
+struct USTable: Identifiable {
+    var id: String { name }
+    let name: String
+    let rows: [USRow]
+}
+
+struct Scorer: Identifiable {
+    let id: String
+    let name: String
+    let teamName: String
+    let goals: Int
+}
+
+enum MainTab: Hashable {
+    case guide, mine
+    case league(SportLeague)
+}
+
+struct GuideEntry: Identifiable {
+    var id: String { "\(league.rawValue)-\(match.id)" }
+    let league: SportLeague
+    let match: Match
+}
+
+// Core-API decodables for the goals-leaders endpoint
+struct CoreLeaders: Decodable {
+    let categories: [CoreCategory]?
+}
+
+struct CoreCategory: Decodable {
+    let name: String?
+    let leaders: [CoreLeader]?
+}
+
+struct CoreLeader: Decodable {
+    let value: Double?
+    let athlete: CoreRef?
+    let team: CoreRef?
+}
+
+struct CoreRef: Decodable {
+    let ref: String?
+    enum CodingKeys: String, CodingKey { case ref = "$ref" }
+}
+
+struct CoreAthlete: Decodable {
+    let id: String?
+    let displayName: String?
+    let fullName: String?
+}
+
+struct WinProbResponse: Decodable {
+    let winprobability: [WPEntry]?
+}
+
+struct WPEntry: Decodable {
+    let homeWinPercentage: Double?
 }
 
 enum MatchEventKind {

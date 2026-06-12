@@ -13,6 +13,10 @@ final class ScoreModel: ObservableObject {
     @Published var nbaMatches: [Match] = []
     @Published var nhlMatches: [Match] = []
     @Published var cricketSections: [LeagueSection] = []
+    @Published var usStandings: [SportLeague: [USTable]] = [:]
+    @Published var scorers: [Scorer] = []
+    @Published var scorersLoading = false
+    @Published var winProb: [String: Double] = [:]   // eventId -> home win %
     @Published var lastUpdated: Date?
     @Published var errorMessage: String?
     @Published var goalAlert: GoalAlert?
@@ -30,6 +34,22 @@ final class ScoreModel: ObservableObject {
     @Published var showFormGuide: Bool {
         didSet { UserDefaults.standard.set(showFormGuide, forKey: "showFormGuide") }
     }
+    @Published var hiddenLeagues: Set<String> {
+        didSet { UserDefaults.standard.set(Array(hiddenLeagues), forKey: "hiddenLeagues") }
+    }
+
+    var visibleLeagues: [SportLeague] {
+        SportLeague.allCases.filter { $0 == .worldCup || !hiddenLeagues.contains($0.rawValue) }
+    }
+
+    func isHidden(_ league: SportLeague) -> Bool {
+        hiddenLeagues.contains(league.rawValue)
+    }
+
+    func setHidden(_ league: SportLeague, _ hidden: Bool) {
+        if hidden { hiddenLeagues.insert(league.rawValue) }
+        else { hiddenLeagues.remove(league.rawValue) }
+    }
 
     private var pollTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
@@ -40,6 +60,7 @@ final class ScoreModel: ObservableObject {
         let saved = defaults.stringArray(forKey: "favoriteTeamIDs") ?? []
         // Migrate pre-multi-sport favorites (bare soccer team ids)
         favorites = Set(saved.map { $0.contains(":") ? $0 : "worldCup:\($0)" })
+        hiddenLeagues = Set(defaults.stringArray(forKey: "hiddenLeagues") ?? [])
         goalAlertsEnabled = defaults.object(forKey: "goalAlertsEnabled") as? Bool ?? true
         countdownAlertEnabled = defaults.object(forKey: "countdownAlertEnabled") as? Bool ?? true
         showFormGuide = defaults.object(forKey: "showFormGuide") as? Bool ?? true
@@ -81,6 +102,10 @@ final class ScoreModel: ObservableObject {
             async let nbaFetch = Self.fetchDayPlusTomorrow(league: "basketball/nba", tomorrow: tomorrowStr)
             async let nhlFetch = Self.fetchDayPlusTomorrow(league: "hockey/nhl", tomorrow: tomorrowStr)
             async let cricketFetch = Self.fetchCricket()
+            async let mlbStandingsFetch = Self.fetchUSStandings(path: "baseball/mlb")
+            async let nflStandingsFetch = Self.fetchUSStandings(path: "football/nfl")
+            async let nbaStandingsFetch = Self.fetchUSStandings(path: "basketball/nba")
+            async let nhlStandingsFetch = Self.fetchUSStandings(path: "hockey/nhl")
 
             let (today, next, standings, rounds) = try await (todayFetch, tomorrowFetch, standingsFetch, bracketFetch)
             // Secondary sports shouldn't take down the World Cup view
@@ -92,6 +117,10 @@ final class ScoreModel: ObservableObject {
             nbaMatches = (try? await nbaFetch) ?? nbaMatches
             nhlMatches = (try? await nhlFetch) ?? nhlMatches
             cricketSections = (try? await cricketFetch) ?? cricketSections
+            if let t = try? await mlbStandingsFetch { usStandings[.mlb] = t }
+            if let t = try? await nflStandingsFetch { usStandings[.nfl] = t }
+            if let t = try? await nbaStandingsFetch { usStandings[.nba] = t }
+            if let t = try? await nhlStandingsFetch { usStandings[.nhl] = t }
 
             detectGoals(in: today)
 
@@ -198,7 +227,7 @@ final class ScoreModel: ObservableObject {
             (.nba, nbaMatches), (.nhl, nhlMatches), (.mlb, mlbMatches),
             (.nfl, nflMatches), (.cfb, cfbMatches),
             (.cricket, cricketSections.flatMap(\.matches)),
-        ]
+        ].filter { !isHidden($0.0) }
         var firstLive: (SportLeague, Match)?
         for (league, pool) in pools {
             for m in pool where m.isLive {
@@ -207,6 +236,108 @@ final class ScoreModel: ObservableObject {
             }
         }
         return firstLive
+    }
+
+    /// Cross-sport TV guide: live games plus everything starting today.
+    var guideEntries: [GuideEntry] {
+        var out: [GuideEntry] = []
+        let cal = Calendar.current
+        for league in visibleLeagues {
+            for m in matches(for: league) where m.state != .post {
+                if m.isLive || cal.isDateInToday(m.kickoff) {
+                    out.append(GuideEntry(league: league, match: m))
+                }
+            }
+        }
+        return out.sorted {
+            ($0.match.isLive ? 0 : 1, $0.match.kickoff) < ($1.match.isLive ? 0 : 1, $1.match.kickoff)
+        }
+    }
+
+    /// Every upcoming/live game involving a starred team, across all leagues.
+    var myTeamEntries: [GuideEntry] {
+        var out: [GuideEntry] = []
+        for league in visibleLeagues {
+            var pool = matches(for: league)
+            if league == .worldCup { pool += tomorrowMatches }
+            for m in pool where isFavoriteMatch(m, league: league) {
+                out.append(GuideEntry(league: league, match: m))
+            }
+        }
+        return out.sorted {
+            ($0.match.isLive ? 0 : 1, $0.match.kickoff) < ($1.match.isLive ? 0 : 1, $1.match.kickoff)
+        }
+    }
+
+    // MARK: - On-demand data (scorers, win probability)
+
+    func loadScorers() async {
+        guard scorers.isEmpty, !scorersLoading else { return }
+        scorersLoading = true
+        defer { scorersLoading = false }
+        var teamNames: [String: String] = [:]
+        for g in groups {
+            for r in g.rows { teamNames[r.id] = r.name }
+        }
+        if let result = try? await Self.fetchScorers(teamNames: teamNames) {
+            scorers = result
+        }
+    }
+
+    func loadWinProb(league: SportLeague, matchId: String) async {
+        guard let path = league.apiPath else { return }
+        let url = "https://site.api.espn.com/apis/site/v2/sports/\(path)/summary?event=\(matchId)"
+        guard let pct = try? await Self.getWinProb(url) else { return }
+        winProb[matchId] = pct
+    }
+
+    nonisolated private static func getWinProb(_ url: String) async throws -> Double? {
+        let response = try await getJSON(url, as: WinProbResponse.self)
+        return response.winprobability?.last?.homeWinPercentage
+    }
+
+    nonisolated static func fetchScorers(teamNames: [String: String]) async throws -> [Scorer] {
+        let url = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/seasons/2026/types/1/leaders?lang=en&region=us"
+        let leaders = try await getJSON(url, as: CoreLeaders.self)
+        let goals = leaders.categories?.first { $0.name == "goalsLeaders" }?.leaders ?? []
+        var out: [Scorer] = []
+        for leader in goals.prefix(12) {
+            guard let athleteRef = leader.athlete?.ref,
+                  let athleteURL = athleteRef.replacingOccurrences(of: "http://", with: "https://")
+                    .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+            else { continue }
+            guard let athlete = try? await getJSON(athleteURL, as: CoreAthlete.self) else { continue }
+            let teamId = leader.team?.ref?
+                .split(separator: "?").first
+                .flatMap { $0.split(separator: "/").last.map(String.init) } ?? ""
+            out.append(Scorer(id: athlete.id ?? UUID().uuidString,
+                              name: athlete.displayName ?? athlete.fullName ?? "—",
+                              teamName: teamNames[teamId] ?? "",
+                              goals: Int(leader.value ?? 0)))
+        }
+        return out
+    }
+
+    nonisolated static func fetchUSStandings(path: String) async throws -> [USTable] {
+        let url = "https://site.api.espn.com/apis/v2/sports/\(path)/standings"
+        let response = try await getJSON(url, as: StandingsResponse.self)
+        return (response.children ?? []).compactMap { group -> USTable? in
+            guard let name = group.name, let entries = group.standings?.entries else { return nil }
+            let rows = entries.map { entry -> USRow in
+                func stat(_ key: String) -> SBStat? {
+                    entry.stats.first { $0.name == key }
+                }
+                return USRow(id: entry.team.id ?? UUID().uuidString,
+                             name: entry.team.displayName ?? "—",
+                             logoURL: entry.team.logos?.first?.href.flatMap(URL.init(string:)),
+                             wins: Int(stat("wins")?.value ?? 0),
+                             losses: Int(stat("losses")?.value ?? 0),
+                             pct: stat("winPercent")?.displayValue ?? "—",
+                             gamesBehind: stat("gamesBehind")?.displayValue ?? "—")
+            }
+            .sorted { Double($0.pct) ?? 0 > Double($1.pct) ?? 0 }
+            return USTable(name: name, rows: rows)
+        }
     }
 
     var menuTitle: String {
@@ -394,7 +525,8 @@ final class ScoreModel: ObservableObject {
                             logoURL: c.team.logo.flatMap(URL.init(string:)),
                             winner: c.winner ?? false,
                             form: c.form,
-                            siteURL: site)
+                            siteURL: site,
+                            periods: (c.linescores ?? []).compactMap { $0.value }.map { Int($0) })
         }
 
         let state: MatchState

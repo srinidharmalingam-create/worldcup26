@@ -89,28 +89,35 @@ enum DashboardTab: String, CaseIterable {
     case matches = "Matches"
     case groups = "Groups"
     case bracket = "Bracket"
+    case scorers = "Scorers"
 }
 
 struct DashboardView: View {
     @ObservedObject var model: ScoreModel
     @State private var tab: DashboardTab = .matches
-    @State private var league: SportLeague = .worldCup
+    @State private var mainTab: MainTab = .league(.worldCup)
 
     var body: some View {
         VStack(spacing: 0) {
             HeaderView(model: model)
-            LeaguePicker(selected: $league)
-            if league == .worldCup {
+            TopPicker(selected: $mainTab, model: model)
+            if case .league(.worldCup) = mainTab {
                 TabBar(selected: $tab)
             }
             ScrollView {
-                if league == .worldCup {
+                switch mainTab {
+                case .guide:
+                    GuideView(model: model)
+                case .mine:
+                    MyTeamsView(model: model)
+                case .league(.worldCup):
                     switch tab {
                     case .matches: MatchesTab(model: model)
                     case .groups: GroupsTab(model: model)
                     case .bracket: BracketTab(model: model)
+                    case .scorers: ScorersTab(model: model)
                     }
-                } else {
+                case .league(let league):
                     OtherLeagueView(league: league, model: model)
                 }
             }
@@ -162,10 +169,23 @@ struct LeaguePicker: View {
 struct OtherLeagueView: View {
     let league: SportLeague
     @ObservedObject var model: ScoreModel
+    @State private var showStandings = false
+
+    private var hasStandings: Bool {
+        [.mlb, .nfl, .nba, .nhl].contains(league)
+    }
 
     var body: some View {
         VStack(spacing: 10) {
-            if league == .cricket {
+            if hasStandings {
+                HStack(spacing: 4) {
+                    subTab("Games", active: !showStandings) { showStandings = false }
+                    subTab("Standings", active: showStandings) { showStandings = true }
+                }
+            }
+            if showStandings && hasStandings {
+                USStandingsView(league: league, model: model)
+            } else if league == .cricket {
                 if model.cricketSections.isEmpty {
                     emptyState("No cricket matches right now")
                 }
@@ -186,6 +206,20 @@ struct OtherLeagueView: View {
             }
         }
         .padding(12)
+    }
+
+    private func subTab(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity)
+                .background(active ? .white.opacity(0.14) : .white.opacity(0.001), in: Capsule())
+                .foregroundStyle(active ? .white : .secondary)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -375,6 +409,15 @@ struct SettingsView: View {
             Toggle("Kickoff countdown (last 10 min)", isOn: $model.countdownAlertEnabled)
             Divider()
             Toggle("Show recent form on upcoming matches", isOn: $model.showFormGuide)
+            Divider()
+            Text("Leagues")
+                .font(.system(.caption, design: .rounded).weight(.bold))
+                .foregroundStyle(.secondary)
+            ForEach(SportLeague.allCases.filter { $0 != .worldCup }) { league in
+                Toggle("\(league.emoji) \(league.label)", isOn: Binding(
+                    get: { !model.isHidden(league) },
+                    set: { model.setHidden(league, !$0) }))
+            }
             Text("Star a team on any match card to follow it — its games get priority in the menu bar.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -566,7 +609,11 @@ struct MatchCard: View {
                 }
             }
             if expanded {
-                DetailsList(match: match, model: model)
+                if league == .worldCup {
+                    DetailsList(match: match, model: model)
+                } else {
+                    BoxScoreView(match: match, league: league, model: model)
+                }
             }
         }
         .padding(12)
@@ -603,16 +650,16 @@ struct MatchCard: View {
                 }
                 .help("Open ESPN Gamecast")
             }
-            if match.state != .pre, league == .worldCup {
+            if match.state != .pre, league == .worldCup || league.apiPath != nil {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { expanded.toggle() }
-                    if expanded {
+                    if expanded, league == .worldCup {
                         Task { await model.loadDetails(for: match.id) }
                     }
                 } label: {
                     Image(systemName: expanded ? "chevron.up.circle.fill" : "chevron.down.circle")
                 }
-                .help("Goals & cards")
+                .help(league == .worldCup ? "Goals & cards" : "Box score")
             }
         }
         .buttonStyle(.plain)

@@ -136,10 +136,12 @@
     </div>
   </header>
   <nav class="leagues" id="leagues"></nav>
+  <div id="lgsettings" style="display:none"></div>
   <nav class="tabs" id="wctabs">
     <button data-tab="matches" class="on">Matches</button>
     <button data-tab="groups">Groups</button>
     <button data-tab="bracket">Bracket</button>
+    <button data-tab="scorers">Scorers</button>
   </nav>
   <main id="view"><div class="center">Loading matches…</div></main>
   <footer>
@@ -172,23 +174,57 @@ const LEAGUES = [
   { key: "nba",      em: "🏀", label: "NBA", path: "basketball/nba" },
   { key: "nhl",      em: "🏒", label: "NHL", path: "hockey/nhl" },
 ];
-const state = { league: "worldCup", tab: "matches", today: [], tomorrow: [], groups: [], bracket: [],
+const state = { league: "worldCup", tab: "matches", subView: "games",
+                today: [], tomorrow: [], groups: [], bracket: [],
                 mlb: [], nfl: [], cfb: [], nba: [], nhl: [], cricket: [],
+                usStandings: {}, scorers: null, scorersLoading: false,
+                expanded: new Set(), winProb: {},
+                hidden: new Set(JSON.parse(localStorage.getItem("hiddenLg") || "[]")),
                 favs: new Set(JSON.parse(localStorage.getItem("favs2") || "[]")),
                 prevScores: {}, goalMsg: null, goalAt: 0, error: null };
+const NAV_EXTRAS = [
+  { key: "guide", em: "📺", label: "Today" },
+  { key: "mine",  em: "⭐️", label: "My Teams" },
+];
 
 document.getElementById("today").textContent =
   new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 document.getElementById("tz").textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const leaguesNav = document.getElementById("leagues");
-leaguesNav.innerHTML = LEAGUES.map(l =>
-  `<button data-lg="${l.key}" class="${l.key === "worldCup" ? "on" : ""}"><span class="em">${l.em}</span>${l.label}</button>`).join("");
+function renderNav() {
+  const items = [...NAV_EXTRAS, ...LEAGUES.filter(l => l.key === "worldCup" || !state.hidden.has(l.key))];
+  leaguesNav.innerHTML = items.map(l =>
+    `<button data-lg="${l.key}" class="${l.key === state.league ? "on" : ""}"><span class="em">${l.em}</span>${l.label}</button>`).join("")
+    + `<button data-lg="__settings" title="Choose leagues"><span class="em">⚙️</span>Leagues</button>`;
+}
+renderNav();
+function renderLgSettings() {
+  const panel = document.getElementById("lgsettings");
+  panel.innerHTML = `<div class="card" style="margin-bottom:12px"><b style="font-size:12px">Show leagues</b><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">` +
+    LEAGUES.filter(l => l.key !== "worldCup").map(l =>
+      `<label style="font-size:12px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-hide="${l.key}" ${state.hidden.has(l.key) ? "" : "checked"}> ${l.em} ${l.label}</label>`).join("") +
+    `</div></div>`;
+  panel.querySelectorAll("input[data-hide]").forEach(cb => cb.addEventListener("change", () => {
+    cb.checked ? state.hidden.delete(cb.dataset.hide) : state.hidden.add(cb.dataset.hide);
+    localStorage.setItem("hiddenLg", JSON.stringify([...state.hidden]));
+    if (state.hidden.has(state.league)) state.league = "worldCup";
+    renderNav(); render();
+  }));
+}
 leaguesNav.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.lg === "__settings") {
+    const panel = document.getElementById("lgsettings");
+    const show = panel.style.display === "none";
+    if (show) renderLgSettings();
+    panel.style.display = show ? "block" : "none";
+    return;
+  }
   state.league = b.dataset.lg;
+  state.subView = "games";
   track("league-" + b.dataset.lg);
-  leaguesNav.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  renderNav();
   document.getElementById("wctabs").style.display = state.league === "worldCup" ? "flex" : "none";
   render();
 });
@@ -222,7 +258,8 @@ function parseMatch(ev) {
              ab: x.team?.abbreviation || (x.team?.displayName || "?").slice(0, 3).toUpperCase(),
              logo: x.team?.logo || "", score: num,
              scoreText: x.score != null && String(x.score).length ? String(x.score) : null,
-             win: x.winner === true || x.winner === "true", form: x.form || "", site };
+             win: x.winner === true || x.winner === "true", form: x.form || "", site,
+             periods: (x.linescores || []).map(l => l.value == null ? "-" : Math.round(l.value)) };
   };
   const st = c.status?.type?.state === "in" ? "live" : c.status?.type?.state === "post" ? "post" : "pre";
   const nets = [...new Set((c.broadcasts || []).flatMap(b => b.names || []).map(n => NET[n] || n))];
@@ -256,6 +293,62 @@ async function fetchCricket() {
     } catch {}
   }));
   return out;
+}
+
+async function loadStandings(key) {
+  if (state.usStandings[key]) return;
+  const path = LEAGUES.find(l => l.key === key)?.path; if (!path) return;
+  try {
+    const d = await getJSON(`https://site.api.espn.com/apis/v2/sports/${path}/standings`);
+    state.usStandings[key] = (d.children || []).map(g => ({
+      name: g.name,
+      rows: (g.standings?.entries || []).map(e => {
+        const v = k => e.stats.find(s => s.name === k);
+        return { id: e.team.id, name: e.team.displayName, logo: e.team.logos?.[0]?.href || "",
+                 w: Math.round(v("wins")?.value ?? 0), l: Math.round(v("losses")?.value ?? 0),
+                 pct: v("winPercent")?.displayValue || "—", gb: v("gamesBehind")?.displayValue || "—" };
+      }).sort((a, b) => (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0)),
+    }));
+  } catch { state.usStandings[key] = []; }
+  render();
+}
+
+async function loadScorers() {
+  if (state.scorers || state.scorersLoading) return;
+  state.scorersLoading = true; render();
+  try {
+    const d = await getJSON("https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/seasons/2026/types/1/leaders?lang=en&region=us");
+    const leaders = (d.categories || []).find(c => c.name === "goalsLeaders")?.leaders || [];
+    const teamNames = {};
+    state.groups.forEach(g => g.rows.forEach(r => teamNames[r.id] = r.name));
+    state.scorers = (await Promise.all(leaders.slice(0, 12).map(async ld => {
+      try {
+        const ath = await getJSON(ld.athlete.$ref.replace("http://", "https://"));
+        const teamId = (ld.team?.$ref || "").split("?")[0].split("/").pop();
+        return { name: ath.displayName || ath.fullName || "—", team: teamNames[teamId] || "", goals: Math.round(ld.value || 0) };
+      } catch { return null; }
+    }))).filter(Boolean);
+  } catch { state.scorers = []; }
+  state.scorersLoading = false; render();
+}
+
+async function loadWinProb(key, id) {
+  if (state.winProb[id] !== undefined) return;
+  state.winProb[id] = null;
+  const path = LEAGUES.find(l => l.key === key)?.path; if (!path) return;
+  try {
+    const d = await getJSON(`${SITE}/${path}/summary?event=${id}`);
+    const wp = d.winprobability;
+    if (wp && wp.length) state.winProb[id] = wp[wp.length - 1].homeWinPercentage;
+  } catch {}
+  render();
+}
+
+function toggleBox(key, id, live) {
+  state.expanded.has(id) ? state.expanded.delete(id) : state.expanded.add(id);
+  track("box-score");
+  if (state.expanded.has(id) && live) loadWinProb(key, id);
+  render();
 }
 
 async function refresh() {
@@ -370,9 +463,97 @@ function cardHTML(m, lg = "worldCup") {
   return `<div class="card ${m.state === "live" ? "live" : ""} ${isFav(m, lg) ? "fav" : ""}">
     <div class="teams">${teamHTML(m.home, lostH, m.state === "pre" && lg === "worldCup", lg)}
       <div class="mid">${mid}</div>${teamHTML(m.away, lostA, m.state === "pre" && lg === "worldCup", lg)}</div>
-    <div class="meta">${chip}<span>${esc(m.venue)}${m.city ? " · " + esc(m.city) : ""}</span>${m.link ? `<a class="gc" href="${esc(m.link)}" target="_blank" rel="noopener">Gamecast ↗</a>` : ""}</div>
+    <div class="meta">${chip}<span>${esc(m.venue)}${m.city ? " · " + esc(m.city) : ""}</span>
+      ${lg !== "worldCup" && m.state !== "pre" && (m.home.periods.length || m.away.periods.length)
+        ? `<a class="gc" style="cursor:pointer" onclick="toggleBox('${lg}','${esc(m.id)}',${m.state === "live"})">${state.expanded.has(m.id) ? "Hide ▴" : "Box score ▾"}</a>` : ""}
+      ${m.link ? `<a class="gc" href="${esc(m.link)}" target="_blank" rel="noopener">Gamecast ↗</a>` : ""}</div>
     ${m.nets.length ? `<div class="tv"><span class="lbl">📺</span>${m.nets.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
+    ${state.expanded.has(m.id) ? boxScoreHTML(m) : ""}
   </div>`;
+}
+
+function boxScoreHTML(m) {
+  const count = Math.max(m.home.periods.length, m.away.periods.length);
+  const row = t => `<tr><td style="font-weight:800">${esc(t.ab)}</td>` +
+    Array.from({ length: count }, (_, i) => `<td>${t.periods[i] ?? "-"}</td>`).join("") +
+    `<td style="font-weight:800">${t.score ?? 0}</td></tr>`;
+  const wp = state.winProb[m.id];
+  const wpHTML = m.state === "live" && wp != null
+    ? `<div style="margin-top:7px;font-size:10px;color:var(--dim)">Win probability
+         <b style="color:var(--text)">${esc(m.home.ab)} ${Math.round(wp * 100)}% – ${100 - Math.round(wp * 100)}% ${esc(m.away.ab)}</b>
+         <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin-top:3px">
+           <div style="height:4px;border-radius:2px;background:var(--green);width:${Math.round(wp * 100)}%"></div></div></div>`
+    : "";
+  return `<div style="background:rgba(0,0,0,.2);border-radius:10px;padding:8px;margin-top:8px">
+    <table style="font-family:ui-monospace,Menlo,monospace;font-size:10px">
+      <tr style="color:var(--dim)"><td></td>${Array.from({ length: count }, (_, i) => `<td>${i + 1}</td>`).join("")}<td><b>T</b></td></tr>
+      ${row(m.home)}${row(m.away)}
+    </table>${wpHTML}</div>`;
+}
+
+function guideEntries() {
+  const out = [];
+  const today = d => d.toDateString() === new Date().toDateString();
+  const pools = [["worldCup", state.today, "⚽️"], ["cricket", state.cricket.flatMap(s => s.ms), "🏏"],
+    ["mlb", state.mlb, "⚾️"], ["nfl", state.nfl, "🏈"], ["cfb", state.cfb, "🎓"],
+    ["nba", state.nba, "🏀"], ["nhl", state.nhl, "🏒"]];
+  for (const [key, pool, em] of pools) {
+    if (key !== "worldCup" && state.hidden.has(key)) continue;
+    for (const m of pool) {
+      if (m.state === "post") continue;
+      if (m.state === "live" || today(m.ko)) out.push({ key, em, m });
+    }
+  }
+  return out.sort((a, b) => (a.m.state === "live" ? 0 : 1) - (b.m.state === "live" ? 0 : 1) || a.m.ko - b.m.ko);
+}
+
+function myTeamEntries() {
+  const out = [];
+  const pools = [["worldCup", [...state.today, ...state.tomorrow], "⚽️"],
+    ["cricket", state.cricket.flatMap(s => s.ms), "🏏"], ["mlb", state.mlb, "⚾️"],
+    ["nfl", state.nfl, "🏈"], ["cfb", state.cfb, "🎓"], ["nba", state.nba, "🏀"], ["nhl", state.nhl, "🏒"]];
+  for (const [key, pool, em] of pools) {
+    if (key !== "worldCup" && state.hidden.has(key)) continue;
+    for (const m of pool) if (isFav(m, key)) out.push({ key, em, m });
+  }
+  return out.sort((a, b) => (a.m.state === "live" ? 0 : 1) - (b.m.state === "live" ? 0 : 1) || a.m.ko - b.m.ko);
+}
+
+function guideRowHTML(e) {
+  const m = e.m;
+  const when = m.state === "live"
+    ? `<span style="color:var(--red);font-weight:800;font-size:10px"><span class="dot"></span>LIVE</span>`
+    : `<span style="font-weight:700">${fmtTime(m.ko)}</span>`;
+  const score = m.state === "live" && m.home.score != null
+    ? `${esc(m.home.ab)} ${m.home.score}–${m.away.score} ${esc(m.away.ab)}`
+    : `${esc(m.home.ab)} v ${esc(m.away.ab)}`;
+  return `<div class="row">
+    <span style="min-width:64px">${when}</span><span>${e.em}</span>
+    <span class="t">${isFav(m, e.key) ? "⭐ " : ""}${score}</span>
+    <span style="color:var(--dim);font-size:10px">${esc(m.nets.slice(0, 2).join(" · "))}</span>
+    ${m.link ? `<a class="gc" href="${esc(m.link)}" target="_blank" rel="noopener">↗</a>` : ""}</div>`;
+}
+
+function standingsHTML(key) {
+  const tables = state.usStandings[key];
+  if (!tables) { loadStandings(key); return `<div class="center">Loading standings…</div>`; }
+  if (!tables.length) return `<div class="center">Standings unavailable</div>`;
+  return tables.map(t => `<div class="card"><table>
+    <tr><th>${esc(t.name)}</th><th>W</th><th>L</th><th>PCT</th><th>GB</th></tr>
+    ${t.rows.map(r => `<tr class="${state.favs.has(key + ":" + r.id) ? "faved" : ""}">
+      <td class="teamcell">${r.logo ? `<img src="${esc(r.logo)}" alt="" loading="lazy">` : ""}${esc(r.name)}</td>
+      <td>${r.w}</td><td>${r.l}</td><td>${esc(r.pct)}</td><td>${esc(r.gb)}</td></tr>`).join("")}
+    </table></div>`).join("");
+}
+
+function scorersHTML() {
+  if (!state.scorers) { loadScorers(); return `<div class="center">Loading scorers…</div>`; }
+  if (!state.scorers.length) return `<div class="center">No goals yet</div>`;
+  return `<div class="center" style="padding:4px 0 10px;color:var(--gold);font-weight:800">Golden Boot Race</div>` +
+    state.scorers.map((s, i) => `<div class="row">
+      <span style="min-width:18px;text-align:right;color:${i === 0 ? "var(--gold)" : "var(--dim)"};font-weight:800">${i + 1}</span>
+      <span class="t">${esc(s.name)}<br><span style="color:var(--dim);font-size:10px">${esc(s.team)}</span></span>
+      <span style="font-weight:900">⚽️ ${s.goals}</span></div>`).join("");
 }
 
 function cricketCardHTML(m) {
@@ -396,8 +577,34 @@ function cricketCardHTML(m) {
 function render() {
   const v = document.getElementById("view");
   let h = state.error ? `<div class="err">${state.error}</div>` : "";
+  if (state.league === "guide") {
+    const entries = guideEntries();
+    const live = entries.filter(e => e.m.state === "live"), up = entries.filter(e => e.m.state !== "live");
+    if (!entries.length) h += `<div class="center">Nothing on today</div>`;
+    if (live.length) h += `<div class="section">LIVE NOW</div>` + live.map(guideRowHTML).join("");
+    if (up.length) h += `<div class="section">COMING UP TODAY</div>` + up.map(guideRowHTML).join("");
+    v.innerHTML = h; return;
+  }
+  if (state.league === "mine") {
+    const entries = myTeamEntries();
+    if (!state.favs.size) {
+      h += `<div class="center">⭐️<br><b>No teams followed yet</b><br>Tap the ☆ next to any team name to follow it across every sport.</div>`;
+    } else if (!entries.length) {
+      h += `<div class="center">No upcoming games for your teams</div>`;
+    }
+    h += entries.map(e => e.key === "cricket" ? cricketCardHTML(e.m) : cardHTML(e.m, e.key)).join("");
+    v.innerHTML = h; return;
+  }
   if (state.league !== "worldCup") {
-    if (state.league === "cricket") {
+    const hasStandings = ["mlb", "nfl", "nba", "nhl"].includes(state.league);
+    if (hasStandings) {
+      h += `<nav class="tabs" style="margin-bottom:10px">
+        <button class="${state.subView === "games" ? "on" : ""}" onclick="state.subView='games';render()">Games</button>
+        <button class="${state.subView === "standings" ? "on" : ""}" onclick="state.subView='standings';track('standings-${state.league}');render()">Standings</button></nav>`;
+    }
+    if (hasStandings && state.subView === "standings") {
+      h += standingsHTML(state.league);
+    } else if (state.league === "cricket") {
       h += state.cricket.length
         ? state.cricket.map(s => `<div class="section">${esc(s.title).toUpperCase()}</div>` + s.ms.map(cricketCardHTML).join("")).join("")
         : `<div class="center">No cricket matches right now</div>`;
@@ -406,6 +613,10 @@ function render() {
       h += pool.length ? pool.map(m => cardHTML(m, state.league)).join("")
         : `<div class="center">No ${state.league.toUpperCase()} games scheduled</div>`;
     }
+    v.innerHTML = h; return;
+  }
+  if (state.tab === "scorers") {
+    h += scorersHTML();
     v.innerHTML = h; return;
   }
   if (state.tab === "matches") {
