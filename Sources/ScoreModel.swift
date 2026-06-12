@@ -376,14 +376,17 @@ final class ScoreModel: ObservableObject {
         let awayC = comp.competitors.first { $0.homeAway == "away" } ?? comp.competitors[1]
 
         func side(_ c: SBCompetitor) -> TeamSide {
-            TeamSide(id: c.team.id ?? c.team.displayName,
-                     name: c.team.displayName,
-                     abbrev: c.team.abbreviation ?? String(c.team.displayName.prefix(3)).uppercased(),
-                     score: c.score.flatMap(Int.init),
-                     scoreText: c.score?.isEmpty == false ? c.score : nil,
-                     logoURL: c.team.logo.flatMap(URL.init(string:)),
-                     winner: c.winner ?? false,
-                     form: c.form)
+            let site = (c.team.links?.first { $0.rel?.contains("clubhouse") == true }
+                        ?? c.team.links?.first)?.href.flatMap(URL.init(string:))
+            return TeamSide(id: c.team.id ?? c.team.displayName,
+                            name: c.team.displayName,
+                            abbrev: c.team.abbreviation ?? String(c.team.displayName.prefix(3)).uppercased(),
+                            score: c.score.flatMap(Int.init),
+                            scoreText: c.score?.isEmpty == false ? c.score : nil,
+                            logoURL: c.team.logo.flatMap(URL.init(string:)),
+                            winner: c.winner ?? false,
+                            form: c.form,
+                            siteURL: site)
         }
 
         let state: MatchState

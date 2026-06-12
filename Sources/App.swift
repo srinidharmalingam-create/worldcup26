@@ -204,10 +204,17 @@ struct CricketCard: View {
                     .frame(width: 22, height: 22)
                     .background(.white.opacity(0.9), in: Circle())
                     .clipShape(Circle())
-                    Text(side.name)
-                        .font(.system(.caption, design: .rounded)
-                            .weight(side.winner ? .bold : .semibold))
-                        .lineLimit(1)
+                    Button {
+                        if let url = side.siteURL { NSWorkspace.shared.open(url) }
+                    } label: {
+                        Text(side.name)
+                            .font(.system(.caption, design: .rounded)
+                                .weight(side.winner ? .bold : .semibold))
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(side.siteURL == nil)
+                    .help(side.siteURL == nil ? "" : "Open team page on ESPN")
                     Button {
                         model.toggleFavorite(.cricket, side.id)
                     } label: {
@@ -745,10 +752,17 @@ struct TeamColumn: View {
                 isFavorite ? .yellow.opacity(0.8) : .white.opacity(0.25),
                 lineWidth: isFavorite ? 1.5 : 1))
             HStack(spacing: 3) {
-                Text(side.name)
-                    .font(.system(.caption, design: .rounded).weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                Button {
+                    if let url = side.siteURL { NSWorkspace.shared.open(url) }
+                } label: {
+                    Text(side.name)
+                        .font(.system(.caption, design: .rounded).weight(.semibold))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+                .buttonStyle(.plain)
+                .disabled(side.siteURL == nil)
+                .help(side.siteURL == nil ? "" : "Open team page on ESPN")
                 Button {
                     model.toggleFavorite(league, side.id)
                 } label: {

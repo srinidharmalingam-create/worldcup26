@@ -115,6 +115,8 @@
         font-size: 11px; white-space: nowrap; }
   .gc:hover { color: var(--text); }
   .row .gc { margin-left: 0; }
+  .tlink { color: inherit; text-decoration: none; }
+  .tlink:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -191,11 +193,13 @@ function parseMatch(ev) {
   const side = (ha, i) => {
     const x = pick(ha, i) || {};
     const num = x.score != null && /^\d+$/.test(String(x.score)) ? +x.score : null;
+    const links = x.team?.links || [];
+    const site = (links.find(l => (l.rel || []).includes("clubhouse")) || links[0])?.href || null;
     return { id: x.team?.id || "", name: x.team?.displayName || "—",
              ab: x.team?.abbreviation || (x.team?.displayName || "?").slice(0, 3).toUpperCase(),
              logo: x.team?.logo || "", score: num,
              scoreText: x.score != null && String(x.score).length ? String(x.score) : null,
-             win: x.winner === true || x.winner === "true", form: x.form || "" };
+             win: x.winner === true || x.winner === "true", form: x.form || "", site };
   };
   const st = c.status?.type?.state === "in" ? "live" : c.status?.type?.state === "post" ? "post" : "pre";
   const nets = [...new Set((c.broadcasts || []).flatMap(b => b.names || []).map(n => NET[n] || n))];
@@ -311,9 +315,10 @@ function toggleFav(lg, id) {
 
 function teamHTML(t, lost, showForm, lg) {
   const fav = state.favs.has(`${lg}:${t.id}`);
+  const nm = t.site ? `<a class="tlink" href="${esc(t.site)}" target="_blank" rel="noopener">${esc(t.name)}</a>` : esc(t.name);
   return `<div class="team ${fav ? "faved" : ""} ${lost ? "lost" : ""}">
     ${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ""}
-    <div class="nm">${esc(t.name)}<span class="star" onclick="toggleFav('${lg}','${esc(t.id)}')">${fav ? "★" : "☆"}</span></div>
+    <div class="nm">${nm}<span class="star" onclick="toggleFav('${lg}','${esc(t.id)}')">${fav ? "★" : "☆"}</span></div>
     ${showForm && t.form ? `<div class="form">${[...t.form.slice(0, 5)].map(c => `<i class="${c}"></i>`).join("")}</div>` : ""}
   </div>`;
 }
@@ -342,7 +347,7 @@ function cricketCardHTML(m) {
     const fav = state.favs.has(`cricket:${t.id}`);
     return `<div class="cricket-side ${t.win ? "w" : ""}">
       ${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ""}
-      <span class="nm2">${esc(t.name)}</span>
+      <span class="nm2">${t.site ? `<a class="tlink" href="${esc(t.site)}" target="_blank" rel="noopener">${esc(t.name)}</a>` : esc(t.name)}</span>
       <span class="star" style="cursor:pointer;color:${fav ? "var(--gold)" : "var(--dim)"};font-size:11px"
             onclick="toggleFav('cricket','${esc(t.id)}')">${fav ? "★" : "☆"}</span>
       <span class="cs">${esc(t.scoreText || "—")}</span></div>`;

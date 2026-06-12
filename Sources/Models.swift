@@ -117,6 +117,7 @@ struct SBTeam: Decodable {
     let displayName: String
     let logo: String?
     let color: String?
+    let links: [SBLink]?
 }
 
 struct SBStatus: Decodable {
@@ -256,6 +257,7 @@ struct TeamSide {
     let logoURL: URL?
     let winner: Bool
     let form: String?
+    let siteURL: URL?        // ESPN team page
 }
 
 struct Match: Identifiable {
