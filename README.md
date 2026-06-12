@@ -1,6 +1,6 @@
 # ⚽️ WorldCup26
 
-A native macOS menu bar app for the 2026 FIFA World Cup — plus live **cricket, NFL, NBA, and NHL** scores in the same dashboard. Everything lives in the menu bar — no Dock icon, no notification spam.
+A native macOS menu bar app for the 2026 FIFA World Cup — plus live **cricket, MLB, NFL, NBA, and NHL** scores in the same dashboard. Everything lives in the menu bar — no Dock icon, no notification spam.
 
 **[⬇ Download the latest release](https://github.com/srinidharmalingam-create/worldcup26/releases/latest)** — unzip, drag to Applications, right-click → Open the first time. macOS 13+, Apple Silicon & Intel.
 
@@ -31,7 +31,7 @@ All 12 group tables: rank, P/W/D/L, goal difference, points. Top-2 ranks tinted 
 The full knockout road from the Round of 32 (June 28) to the Final (July 19), with TBD placeholders (e.g. "TBD (2A)") until slots are decided, then live/final scores.
 
 ### Other sports (league picker)
-Switch between ⚽️ World Cup, 🏏 Cricket, 🏈 NFL, 🏀 NBA, and 🏒 NHL. Cricket auto-discovers the top active series worldwide (ICC events first) with full innings scores; the US leagues show the same score cards and TV networks as the World Cup. When no World Cup match is on, live games from the other leagues take over the menu bar ticker. Starred favorites work per-league.
+Switch between ⚽️ World Cup, 🏏 Cricket, ⚾️ MLB, 🏈 NFL, 🏀 NBA, and 🏒 NHL. Cricket auto-discovers the top active series worldwide (ICC events first) with full innings scores; the US leagues show the same score cards and TV networks as the World Cup. When no World Cup match is on, live games from the other leagues take over the menu bar ticker. Starred favorites work per-league.
 
 ### Settings (gear icon)
 Toggle goal alerts, the kickoff countdown, and the form guide. "Start at login" lives in the footer.

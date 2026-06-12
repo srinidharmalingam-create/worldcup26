@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Leagues
 
 enum SportLeague: String, CaseIterable, Identifiable {
-    case worldCup, cricket, nfl, nba, nhl
+    case worldCup, cricket, mlb, nfl, nba, nhl
 
     var id: String { rawValue }
 
@@ -11,6 +11,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
         switch self {
         case .worldCup: return "World Cup"
         case .cricket: return "Cricket"
+        case .mlb: return "MLB"
         case .nfl: return "NFL"
         case .nba: return "NBA"
         case .nhl: return "NHL"
@@ -21,6 +22,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
         switch self {
         case .worldCup: return "⚽️"
         case .cricket: return "🏏"
+        case .mlb: return "⚾️"
         case .nfl: return "🏈"
         case .nba: return "🏀"
         case .nhl: return "🏒"
@@ -31,6 +33,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
     /// discovered dynamically; the World Cup has its own fetchers.
     var apiPath: String? {
         switch self {
+        case .mlb: return "baseball/mlb"
         case .nfl: return "football/nfl"
         case .nba: return "basketball/nba"
         case .nhl: return "hockey/nhl"

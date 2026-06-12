@@ -140,12 +140,13 @@ const API = `${SITE}/soccer/fifa.world`;
 const LEAGUES = [
   { key: "worldCup", em: "⚽️", label: "World Cup" },
   { key: "cricket",  em: "🏏", label: "Cricket" },
+  { key: "mlb",      em: "⚾️", label: "MLB", path: "baseball/mlb" },
   { key: "nfl",      em: "🏈", label: "NFL", path: "football/nfl" },
   { key: "nba",      em: "🏀", label: "NBA", path: "basketball/nba" },
   { key: "nhl",      em: "🏒", label: "NHL", path: "hockey/nhl" },
 ];
 const state = { league: "worldCup", tab: "matches", today: [], tomorrow: [], groups: [], bracket: [],
-                nfl: [], nba: [], nhl: [], cricket: [],
+                mlb: [], nfl: [], nba: [], nhl: [], cricket: [],
                 favs: new Set(JSON.parse(localStorage.getItem("favs2") || "[]")),
                 prevScores: {}, goalMsg: null, goalAt: 0, error: null };
 
@@ -235,7 +236,8 @@ async function refresh() {
     ]);
     // other sports are best-effort
     const safe = p => p.catch(() => null);
-    const [nfl, nba1, nba2, nhl1, nhl2, cricket] = await Promise.all([
+    const [mlb1, mlb2, nfl, nba1, nba2, nhl1, nhl2, cricket] = await Promise.all([
+      safe(getJSON(`${SITE}/baseball/mlb/scoreboard`)), safe(getJSON(`${SITE}/baseball/mlb/scoreboard?dates=${ymd(tmr)}`)),
       safe(getJSON(`${SITE}/football/nfl/scoreboard`)),
       safe(getJSON(`${SITE}/basketball/nba/scoreboard`)), safe(getJSON(`${SITE}/basketball/nba/scoreboard?dates=${ymd(tmr)}`)),
       safe(getJSON(`${SITE}/hockey/nhl/scoreboard`)), safe(getJSON(`${SITE}/hockey/nhl/scoreboard?dates=${ymd(tmr)}`)),
@@ -243,6 +245,7 @@ async function refresh() {
     ]);
     const merge = (a, b) => { const ids = new Set(a.map(m => m.id));
       return [...a, ...b.filter(m => !ids.has(m.id))].sort((x, y) => x.ko - y.ko); };
+    if (mlb1) state.mlb = merge(parseBoard(mlb1), mlb2 ? parseBoard(mlb2) : []);
     if (nfl) state.nfl = parseBoard(nfl);
     if (nba1) state.nba = merge(parseBoard(nba1), nba2 ? parseBoard(nba2) : []);
     if (nhl1) state.nhl = merge(parseBoard(nhl1), nhl2 ? parseBoard(nhl2) : []);
@@ -285,7 +288,7 @@ function updateTitle() {
   if (state.goalMsg && Date.now() - state.goalAt < 18e4) { document.title = state.goalMsg; return; }
   const live = state.today.find(m => m.state === "live" && isFav(m, "worldCup")) || state.today.find(m => m.state === "live");
   if (live) { document.title = `${live.home.ab} ${live.home.score}–${live.away.score} ${live.away.ab} ${live.clock}`; return; }
-  for (const [k, pool, em] of [["nba", state.nba, "🏀"], ["nhl", state.nhl, "🏒"], ["nfl", state.nfl, "🏈"]]) {
+  for (const [k, pool, em] of [["nba", state.nba, "🏀"], ["nhl", state.nhl, "🏒"], ["mlb", state.mlb, "⚾️"], ["nfl", state.nfl, "🏈"]]) {
     const g = pool.find(m => m.state === "live");
     if (g) { document.title = `${em} ${g.home.ab} ${g.home.score}–${g.away.score} ${g.away.ab}`; return; }
   }

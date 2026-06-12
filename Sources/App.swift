@@ -44,11 +44,15 @@ struct WorldCupApp: App {
                     let events = try await ScoreModel.fetchSummary(eventId: id)
                     print("  details(\(id)): \(events.count) goal/card events")
                 }
+                let mlb = try await ScoreModel.fetchScoreboard(league: "baseball/mlb", dates: nil)
                 let nfl = try await ScoreModel.fetchScoreboard(league: "football/nfl", dates: nil)
                 let nba = try await ScoreModel.fetchScoreboard(league: "basketball/nba", dates: nil)
                 let nhl = try await ScoreModel.fetchScoreboard(league: "hockey/nhl", dates: nil)
                 let cricket = try await ScoreModel.fetchCricket()
-                print("OK: NFL \(nfl.count) · NBA \(nba.count) · NHL \(nhl.count) · cricket sections \(cricket.count)")
+                print("OK: MLB \(mlb.count) · NFL \(nfl.count) · NBA \(nba.count) · NHL \(nhl.count) · cricket sections \(cricket.count)")
+                if let g = mlb.first {
+                    print("  ⚾️ sample: \(g.home.abbrev) v \(g.away.abbrev) | \(g.statusDetail) | TV: \(g.networks.joined(separator: ", "))")
+                }
                 for s in cricket {
                     let m = s.matches[0]
                     print("  🏏 \(s.title): \(m.home.name) [\(m.home.scoreText ?? "-")] v \(m.away.name) [\(m.away.scoreText ?? "-")] | \(m.statusDetail)")

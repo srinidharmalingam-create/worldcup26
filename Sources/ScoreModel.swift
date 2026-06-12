@@ -7,6 +7,7 @@ final class ScoreModel: ObservableObject {
     @Published var groups: [GroupTable] = []
     @Published var bracket: [BracketRound] = []
     @Published var matchDetails: [String: [MatchEvent]] = [:]
+    @Published var mlbMatches: [Match] = []
     @Published var nflMatches: [Match] = []
     @Published var nbaMatches: [Match] = []
     @Published var nhlMatches: [Match] = []
@@ -73,6 +74,7 @@ final class ScoreModel: ObservableObject {
             async let tomorrowFetch = Self.fetchScoreboard(league: "soccer/fifa.world", dates: tomorrowStr)
             async let standingsFetch = Self.fetchStandings()
             async let bracketFetch = Self.fetchBracket()
+            async let mlbFetch = Self.fetchDayPlusTomorrow(league: "baseball/mlb", tomorrow: tomorrowStr)
             async let nflFetch = Self.fetchScoreboard(league: "football/nfl", dates: nil)
             async let nbaFetch = Self.fetchDayPlusTomorrow(league: "basketball/nba", tomorrow: tomorrowStr)
             async let nhlFetch = Self.fetchDayPlusTomorrow(league: "hockey/nhl", tomorrow: tomorrowStr)
@@ -80,6 +82,7 @@ final class ScoreModel: ObservableObject {
 
             let (today, next, standings, rounds) = try await (todayFetch, tomorrowFetch, standingsFetch, bracketFetch)
             // Secondary sports shouldn't take down the World Cup view
+            mlbMatches = (try? await mlbFetch) ?? mlbMatches
             nflMatches = (try? await nflFetch)?.sorted { $0.kickoff < $1.kickoff } ?? nflMatches
             nbaMatches = (try? await nbaFetch) ?? nbaMatches
             nhlMatches = (try? await nhlFetch) ?? nhlMatches
@@ -159,6 +162,7 @@ final class ScoreModel: ObservableObject {
 
     var anyLive: Bool {
         !liveMatches.isEmpty
+            || mlbMatches.contains { $0.isLive }
             || nbaMatches.contains { $0.isLive }
             || nhlMatches.contains { $0.isLive }
             || nflMatches.contains { $0.isLive }
@@ -173,6 +177,7 @@ final class ScoreModel: ObservableObject {
     func matches(for league: SportLeague) -> [Match] {
         switch league {
         case .worldCup: return todayMatches
+        case .mlb: return mlbMatches
         case .nfl: return nflMatches
         case .nba: return nbaMatches
         case .nhl: return nhlMatches
@@ -183,8 +188,8 @@ final class ScoreModel: ObservableObject {
     /// Live game from the other (non-World Cup) leagues, favorites first.
     private var liveOther: (SportLeague, Match)? {
         let pools: [(SportLeague, [Match])] = [
-            (.nba, nbaMatches), (.nhl, nhlMatches), (.nfl, nflMatches),
-            (.cricket, cricketSections.flatMap(\.matches)),
+            (.nba, nbaMatches), (.nhl, nhlMatches), (.mlb, mlbMatches),
+            (.nfl, nflMatches), (.cricket, cricketSections.flatMap(\.matches)),
         ]
         var firstLive: (SportLeague, Match)?
         for (league, pool) in pools {
