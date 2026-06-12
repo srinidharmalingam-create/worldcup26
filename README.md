@@ -2,6 +2,8 @@
 
 A native macOS menu bar app for the 2026 FIFA World Cup. Everything lives in the menu bar — no Dock icon, no notification spam.
 
+**[⬇ Download the latest release](https://github.com/srinidharmalingam-create/worldcup26/releases/latest)** — unzip, drag to Applications, right-click → Open the first time. macOS 13+, Apple Silicon & Intel.
+
 ## Features
 
 ### Menu bar ticker
