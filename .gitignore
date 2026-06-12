@@ -4,3 +4,4 @@ WorldCup26.zip
 *.log
 nohup.out
 .DS_Store
+.claude/
