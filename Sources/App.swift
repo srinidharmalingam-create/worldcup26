@@ -44,6 +44,18 @@ struct WorldCupApp: App {
                     let events = try await ScoreModel.fetchSummary(eventId: id)
                     print("  details(\(id)): \(events.count) goal/card events")
                 }
+                let nfl = try await ScoreModel.fetchScoreboard(league: "football/nfl", dates: nil)
+                let nba = try await ScoreModel.fetchScoreboard(league: "basketball/nba", dates: nil)
+                let nhl = try await ScoreModel.fetchScoreboard(league: "hockey/nhl", dates: nil)
+                let cricket = try await ScoreModel.fetchCricket()
+                print("OK: NFL \(nfl.count) · NBA \(nba.count) · NHL \(nhl.count) · cricket sections \(cricket.count)")
+                for s in cricket {
+                    let m = s.matches[0]
+                    print("  🏏 \(s.title): \(m.home.name) [\(m.home.scoreText ?? "-")] v \(m.away.name) [\(m.away.scoreText ?? "-")] | \(m.statusDetail)")
+                }
+                if let g = nba.first ?? nhl.first {
+                    print("  🏀/🏒 sample: \(g.home.abbrev) v \(g.away.abbrev) | \(g.statusDetail) | TV: \(g.networks.joined(separator: ", "))")
+                }
             } catch {
                 print("FAIL: \(error)")
             }
@@ -65,16 +77,24 @@ enum DashboardTab: String, CaseIterable {
 struct DashboardView: View {
     @ObservedObject var model: ScoreModel
     @State private var tab: DashboardTab = .matches
+    @State private var league: SportLeague = .worldCup
 
     var body: some View {
         VStack(spacing: 0) {
             HeaderView(model: model)
-            TabBar(selected: $tab)
+            LeaguePicker(selected: $league)
+            if league == .worldCup {
+                TabBar(selected: $tab)
+            }
             ScrollView {
-                switch tab {
-                case .matches: MatchesTab(model: model)
-                case .groups: GroupsTab(model: model)
-                case .bracket: BracketTab(model: model)
+                if league == .worldCup {
+                    switch tab {
+                    case .matches: MatchesTab(model: model)
+                    case .groups: GroupsTab(model: model)
+                    case .bracket: BracketTab(model: model)
+                    }
+                } else {
+                    OtherLeagueView(league: league, model: model)
                 }
             }
             FooterView(model: model)
@@ -87,6 +107,166 @@ struct DashboardView: View {
         )
         .environment(\.colorScheme, .dark)
         .foregroundStyle(.white)
+    }
+}
+
+struct LeaguePicker: View {
+    @Binding var selected: SportLeague
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(SportLeague.allCases) { league in
+                Button {
+                    selected = league
+                } label: {
+                    VStack(spacing: 1) {
+                        Text(league.emoji)
+                            .font(.system(size: 15))
+                        Text(league.label)
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .background(selected == league ? .white.opacity(0.14) : .white.opacity(0.001),
+                                in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(selected == league ? .white : .secondary)
+                    .contentShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+    }
+}
+
+struct OtherLeagueView: View {
+    let league: SportLeague
+    @ObservedObject var model: ScoreModel
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if league == .cricket {
+                if model.cricketSections.isEmpty {
+                    emptyState("No cricket matches right now")
+                }
+                ForEach(model.cricketSections) { section in
+                    SectionLabel(text: section.title)
+                    ForEach(section.matches) { match in
+                        CricketCard(match: match, model: model)
+                    }
+                }
+            } else {
+                let matches = model.matches(for: league)
+                if matches.isEmpty {
+                    emptyState("No \(league.label) games scheduled")
+                }
+                ForEach(matches) { match in
+                    MatchCard(match: match, model: model, league: league)
+                }
+            }
+        }
+        .padding(12)
+    }
+
+    @ViewBuilder
+    private func emptyState(_ text: String) -> some View {
+        if model.lastUpdated == nil {
+            ProgressView("Loading…").padding(.vertical, 30)
+        } else {
+            Text(text).foregroundStyle(.secondary).padding(.vertical, 24)
+        }
+    }
+}
+
+struct CricketCard: View {
+    let match: Match
+    @ObservedObject var model: ScoreModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach([match.home, match.away], id: \.id) { side in
+                let fav = model.isFavorite(.cricket, side.id)
+                HStack(spacing: 8) {
+                    AsyncImage(url: side.logoURL) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit()
+                        } else {
+                            Color.clear
+                        }
+                    }
+                    .frame(width: 22, height: 22)
+                    .background(.white.opacity(0.9), in: Circle())
+                    .clipShape(Circle())
+                    Text(side.name)
+                        .font(.system(.caption, design: .rounded)
+                            .weight(side.winner ? .bold : .semibold))
+                        .lineLimit(1)
+                    Button {
+                        model.toggleFavorite(.cricket, side.id)
+                    } label: {
+                        Image(systemName: fav ? "star.fill" : "star")
+                            .font(.system(size: 8))
+                            .foregroundStyle(fav ? .yellow : .secondary.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Text(side.scoreText ?? "—")
+                        .font(.system(size: 11, weight: side.winner ? .bold : .regular,
+                                      design: .monospaced))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+            Divider().overlay(.white.opacity(0.08))
+            HStack(spacing: 6) {
+                if match.isLive {
+                    let detail = match.statusDetail.lowercased() == "live" ? "" : match.statusDetail
+                    HStack(spacing: 4) {
+                        PulsingDot()
+                        Text("LIVE\(detail.isEmpty ? "" : " · \(detail)")")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.red)
+                    }
+                } else if match.state == .post {
+                    Text(match.statusDetail.isEmpty ? "Result" : match.statusDetail)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(match.kickoff, format: .dateTime.weekday(.abbreviated).hour().minute())
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.yellow)
+                }
+                if !match.venue.isEmpty {
+                    Text(match.venue)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if let url = match.gamecastURL {
+                    Button {
+                        NSWorkspace.shared.open(url)
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help("Open scorecard")
+                }
+            }
+        }
+        .padding(12)
+        .background(.white.opacity(match.isLive ? 0.1 : 0.06),
+                    in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(match.isLive ? Color.red.opacity(0.5) : .white.opacity(0.08),
+                              lineWidth: 1)
+        )
     }
 }
 
@@ -314,6 +494,7 @@ struct CountdownBanner: View {
 struct MatchCard: View {
     let match: Match
     @ObservedObject var model: ScoreModel
+    var league: SportLeague = .worldCup
     @State private var expanded = false
 
     var body: some View {
@@ -322,6 +503,7 @@ struct MatchCard: View {
                 TeamColumn(side: match.home,
                            dim: match.state == .post && !match.home.winner && match.away.winner,
                            showForm: model.showFormGuide && match.state == .pre,
+                           league: league,
                            model: model)
                 Spacer(minLength: 4)
                 centerColumn
@@ -329,6 +511,7 @@ struct MatchCard: View {
                 TeamColumn(side: match.away,
                            dim: match.state == .post && !match.away.winner && match.home.winner,
                            showForm: model.showFormGuide && match.state == .pre,
+                           league: league,
                            model: model)
             }
             Divider().overlay(.white.opacity(0.08))
@@ -373,14 +556,14 @@ struct MatchCard: View {
 
     private var borderColor: Color {
         if match.isLive { return .red.opacity(0.5) }
-        if model.isFavoriteMatch(match) { return .yellow.opacity(0.4) }
+        if model.isFavoriteMatch(match, league: league) { return .yellow.opacity(0.4) }
         return .white.opacity(0.08)
     }
 
     @ViewBuilder
     private var actionButtons: some View {
         HStack(spacing: 10) {
-            if match.state == .pre {
+            if match.state == .pre, league == .worldCup {
                 Button {
                     addToCalendar()
                 } label: {
@@ -396,7 +579,7 @@ struct MatchCard: View {
                 }
                 .help("Open ESPN Gamecast")
             }
-            if match.state != .pre {
+            if match.state != .pre, league == .worldCup {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { expanded.toggle() }
                     if expanded {
@@ -430,9 +613,14 @@ struct MatchCard: View {
         VStack(spacing: 2) {
             switch match.state {
             case .pre:
+                if !Calendar.current.isDateInToday(match.kickoff) {
+                    Text(match.kickoff, format: .dateTime.weekday(.wide).month(.abbreviated).day())
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
                 Text(match.kickoff, style: .time)
                     .font(.system(.title2, design: .rounded).weight(.bold))
-                Text("Kickoff")
+                Text(league == .worldCup ? "Kickoff" : "Start")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             case .live, .post:
@@ -448,9 +636,11 @@ struct MatchCard: View {
     private var statusChip: some View {
         switch match.state {
         case .live:
+            let detail = match.statusDetail.lowercased() == "live" ? "" : match.statusDetail
             HStack(spacing: 4) {
                 PulsingDot()
-                Text("LIVE \(match.clock)")
+                Text(league == .worldCup ? "LIVE \(match.clock)"
+                     : "LIVE\(detail.isEmpty ? "" : " · \(detail)")")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(.red)
             }
@@ -458,7 +648,8 @@ struct MatchCard: View {
             .padding(.vertical, 3)
             .background(.red.opacity(0.15), in: Capsule())
         case .post:
-            Text("FT")
+            Text(league == .worldCup ? "FT"
+                 : (match.statusDetail.isEmpty ? "Final" : match.statusDetail))
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 7)
@@ -527,9 +718,10 @@ struct TeamColumn: View {
     let side: TeamSide
     let dim: Bool
     var showForm: Bool = false
+    var league: SportLeague = .worldCup
     @ObservedObject var model: ScoreModel
 
-    private var isFavorite: Bool { model.favorites.contains(side.id) }
+    private var isFavorite: Bool { model.isFavorite(league, side.id) }
 
     var body: some View {
         VStack(spacing: 5) {
@@ -554,7 +746,7 @@ struct TeamColumn: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                 Button {
-                    model.toggleFavorite(side.id)
+                    model.toggleFavorite(league, side.id)
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                         .font(.system(size: 8))
@@ -693,7 +885,7 @@ struct GroupCard: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(group.rows) { row in
-                let isFavorite = model.favorites.contains(row.id)
+                let isFavorite = model.isFavorite(.worldCup, row.id)
                 HStack(spacing: 6) {
                     Text("\(row.rank)")
                         .font(.system(size: 9, design: .monospaced))

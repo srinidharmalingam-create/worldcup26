@@ -1,9 +1,59 @@
 import Foundation
 
+// MARK: - Leagues
+
+enum SportLeague: String, CaseIterable, Identifiable {
+    case worldCup, cricket, nfl, nba, nhl
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .worldCup: return "World Cup"
+        case .cricket: return "Cricket"
+        case .nfl: return "NFL"
+        case .nba: return "NBA"
+        case .nhl: return "NHL"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .worldCup: return "⚽️"
+        case .cricket: return "🏏"
+        case .nfl: return "🏈"
+        case .nba: return "🏀"
+        case .nhl: return "🏒"
+        }
+    }
+
+    /// ESPN API path for the standard scoreboard leagues. Cricket is
+    /// discovered dynamically; the World Cup has its own fetchers.
+    var apiPath: String? {
+        switch self {
+        case .nfl: return "football/nfl"
+        case .nba: return "basketball/nba"
+        case .nhl: return "hockey/nhl"
+        default: return nil
+        }
+    }
+}
+
+struct LeagueSection: Identifiable {
+    var id: String { title }
+    let title: String
+    let matches: [Match]
+}
+
 // MARK: - ESPN API response types
 
 struct Scoreboard: Decodable {
+    let leagues: [SBLeagueInfo]?
     let events: [SBEvent]
+}
+
+struct SBLeagueInfo: Decodable {
+    let name: String?
 }
 
 struct SBEvent: Decodable {
@@ -33,11 +83,29 @@ struct SBCompetition: Decodable {
 }
 
 struct SBCompetitor: Decodable {
-    let homeAway: String
+    let homeAway: String?
     let score: String?
     let winner: Bool?
     let form: String?
     let team: SBTeam
+
+    enum CodingKeys: String, CodingKey { case homeAway, score, winner, form, team }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        homeAway = try? c.decode(String.self, forKey: .homeAway)
+        form = try? c.decode(String.self, forKey: .form)
+        team = try c.decode(SBTeam.self, forKey: .team)
+        // score is a string in most sports but occasionally numeric
+        if let s = try? c.decode(String.self, forKey: .score) { score = s }
+        else if let d = try? c.decode(Double.self, forKey: .score) {
+            score = d == d.rounded() ? String(Int(d)) : String(d)
+        } else { score = nil }
+        // winner is a Bool in most sports but a string ("true") in cricket
+        if let b = try? c.decode(Bool.self, forKey: .winner) { winner = b }
+        else if let s = try? c.decode(String.self, forKey: .winner) { winner = s == "true" }
+        else { winner = nil }
+    }
 }
 
 struct SBTeam: Decodable {
@@ -55,7 +123,7 @@ struct SBStatus: Decodable {
 
 struct SBStatusType: Decodable {
     let state: String        // "pre" | "in" | "post"
-    let completed: Bool
+    let completed: Bool?
     let detail: String?
     let shortDetail: String?
 }
@@ -73,6 +141,26 @@ struct SBAddress: Decodable {
 struct SBBroadcast: Decodable {
     let market: String?
     let names: [String]?
+}
+
+// MARK: - Cricket series discovery (scoreboard/header endpoint)
+
+struct CricketHeader: Decodable {
+    let sports: [CHSport]?
+}
+
+struct CHSport: Decodable {
+    let leagues: [CHLeague]?
+}
+
+struct CHLeague: Decodable {
+    let id: String?
+    let name: String?
+    let events: [CHEvent]?
+}
+
+struct CHEvent: Decodable {
+    let status: String?
 }
 
 // MARK: - ESPN standings types
@@ -161,6 +249,7 @@ struct TeamSide {
     let name: String
     let abbrev: String
     let score: Int?
+    let scoreText: String?   // cricket innings lines like "278/8 (50 ov)"
     let logoURL: URL?
     let winner: Bool
     let form: String?
@@ -173,6 +262,7 @@ struct Match: Identifiable {
     let away: TeamSide
     let state: MatchState
     let clock: String
+    let statusDetail: String   // "Q4 2:31", "Stumps", "Day 2", "Final/OT"
     let venue: String
     let city: String
     let networks: [String]
@@ -246,17 +336,20 @@ struct GoalAlert {
 }
 
 enum ESPNDate {
-    // ESPN dates look like "2026-06-11T19:00Z" (no seconds)
-    static let formatter: DateFormatter = {
+    // ESPN dates come as "2026-06-11T19:00Z" or "2026-06-12T10:00:00Z"
+    private static func make(_ format: String) -> DateFormatter {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm'Z'"
+        f.dateFormat = format
         return f
-    }()
+    }
+
+    static let short = make("yyyy-MM-dd'T'HH:mm'Z'")
+    static let full = make("yyyy-MM-dd'T'HH:mm:ss'Z'")
 
     static func parse(_ s: String) -> Date? {
-        formatter.date(from: s)
+        short.date(from: s) ?? full.date(from: s)
     }
 }
 
