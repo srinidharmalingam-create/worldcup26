@@ -111,6 +111,10 @@
   footer a { color: var(--dim); }
   .err { background: rgba(255,150,50,.12); color: #ffb35c; padding: 10px;
          border-radius: 10px; font-size: 12px; margin-bottom: 10px; }
+  .gc { margin-left: auto; color: var(--dim); text-decoration: none; font-weight: 700;
+        font-size: 11px; white-space: nowrap; }
+  .gc:hover { color: var(--text); }
+  .row .gc { margin-left: 0; }
 </style>
 </head>
 <body>
@@ -195,11 +199,12 @@ function parseMatch(ev) {
   };
   const st = c.status?.type?.state === "in" ? "live" : c.status?.type?.state === "post" ? "post" : "pre";
   const nets = [...new Set((c.broadcasts || []).flatMap(b => b.names || []).map(n => NET[n] || n))];
+  const link = (ev.links || []).find(l => (l.rel || []).includes("summary"))?.href || null;
   return { id: ev.id, ko: new Date(ev.date), home: side("home", 0), away: side("away", 1),
            state: st, clock: c.status?.displayClock || "",
            detail: c.status?.type?.shortDetail || "",
            venue: c.venue?.fullName || "", city: c.venue?.address?.city || "",
-           nets, slug: ev.season?.slug || "group-stage" };
+           nets, slug: ev.season?.slug || "group-stage", link };
 }
 
 async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
@@ -327,7 +332,7 @@ function cardHTML(m, lg = "worldCup") {
   return `<div class="card ${m.state === "live" ? "live" : ""} ${isFav(m, lg) ? "fav" : ""}">
     <div class="teams">${teamHTML(m.home, lostH, m.state === "pre" && lg === "worldCup", lg)}
       <div class="mid">${mid}</div>${teamHTML(m.away, lostA, m.state === "pre" && lg === "worldCup", lg)}</div>
-    <div class="meta">${chip}<span>${esc(m.venue)}${m.city ? " · " + esc(m.city) : ""}</span></div>
+    <div class="meta">${chip}<span>${esc(m.venue)}${m.city ? " · " + esc(m.city) : ""}</span>${m.link ? `<a class="gc" href="${esc(m.link)}" target="_blank" rel="noopener">Gamecast ↗</a>` : ""}</div>
     ${m.nets.length ? `<div class="tv"><span class="lbl">📺</span>${m.nets.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
   </div>`;
 }
@@ -347,7 +352,7 @@ function cricketCardHTML(m) {
     : `<span class="chip up">${fmtDay(m.ko)} ${fmtTime(m.ko)}</span>`;
   return `<div class="card ${m.state === "live" ? "live" : ""}">
     ${side(m.home)}${side(m.away)}
-    <div class="meta">${chip}<span>${esc(m.venue)}</span></div></div>`;
+    <div class="meta">${chip}<span>${esc(m.venue)}</span>${m.link ? `<a class="gc" href="${esc(m.link)}" target="_blank" rel="noopener">Scorecard ↗</a>` : ""}</div></div>`;
 }
 
 function render() {
