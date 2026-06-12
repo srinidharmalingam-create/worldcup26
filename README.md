@@ -4,6 +4,8 @@ A native macOS menu bar app for the 2026 FIFA World Cup. Everything lives in the
 
 **[⬇ Download the latest release](https://github.com/srinidharmalingam-create/worldcup26/releases/latest)** — unzip, drag to Applications, right-click → Open the first time. macOS 13+, Apple Silicon & Intel.
 
+**🌐 Not on a Mac?** Use the web version on any phone, tablet, or computer: **[srinidharmalingam-create.github.io/worldcup26](https://srinidharmalingam-create.github.io/worldcup26/)** — same live scores, TV networks, groups, and bracket, in your local time zone. (Source in [`docs/`](docs/index.html).)
+
 ## Features
 
 ### Menu bar ticker
