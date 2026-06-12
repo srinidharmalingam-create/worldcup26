@@ -1,0 +1,6 @@
+.build/
+WorldCup26.app/
+WorldCup26.zip
+*.log
+nohup.out
+.DS_Store
