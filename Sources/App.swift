@@ -764,6 +764,11 @@ struct TeamColumn: View {
             .overlay(Circle().strokeBorder(
                 isFavorite ? .yellow.opacity(0.8) : .white.opacity(0.25),
                 lineWidth: isFavorite ? 1.5 : 1))
+            .contentShape(Circle())
+            .onTapGesture {
+                if let url = side.siteURL { openInBrowser(url) }
+            }
+            .help(side.siteURL == nil ? "" : "Open team page on ESPN")
             HStack(spacing: 3) {
                 Button {
                     if let url = side.siteURL { openInBrowser(url) }
