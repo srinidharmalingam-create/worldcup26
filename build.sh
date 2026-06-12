@@ -24,6 +24,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/WorldCup26 "$APP/Contents/MacOS/WorldCup26"
 cp Info.plist "$APP/Contents/Info.plist"
 cp .build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp dog.jpg "$APP/Contents/Resources/dog.jpg"
 
 echo "==> Code signing (ad-hoc)..."
 codesign --force --deep -s - "$APP"
