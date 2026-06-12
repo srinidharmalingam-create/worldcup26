@@ -1,0 +1,13 @@
+{
+  "name": "Matchday 26 — Live Sports",
+  "short_name": "Matchday 26",
+  "description": "Live World Cup 2026, cricket, MLB, NFL, college football, NBA and NHL scores in your local time zone.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d2a1c",
+  "theme_color": "#0d2a1c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

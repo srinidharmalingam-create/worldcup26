@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Leagues
 
 enum SportLeague: String, CaseIterable, Identifiable {
-    case worldCup, cricket, mlb, nfl, nba, nhl
+    case worldCup, cricket, mlb, nfl, cfb, nba, nhl
 
     var id: String { rawValue }
 
@@ -13,6 +13,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
         case .cricket: return "Cricket"
         case .mlb: return "MLB"
         case .nfl: return "NFL"
+        case .cfb: return "CFB"
         case .nba: return "NBA"
         case .nhl: return "NHL"
         }
@@ -24,6 +25,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
         case .cricket: return "🏏"
         case .mlb: return "⚾️"
         case .nfl: return "🏈"
+        case .cfb: return "🎓"
         case .nba: return "🏀"
         case .nhl: return "🏒"
         }
@@ -35,6 +37,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
         switch self {
         case .mlb: return "baseball/mlb"
         case .nfl: return "football/nfl"
+        case .cfb: return "football/college-football"
         case .nba: return "basketball/nba"
         case .nhl: return "hockey/nhl"
         default: return nil

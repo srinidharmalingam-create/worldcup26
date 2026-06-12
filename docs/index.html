@@ -3,8 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>⚽️ World Cup 2026 + Live Sports</title>
-<meta name="description" content="Live 2026 FIFA World Cup, cricket, NFL, NBA and NHL scores with US TV networks — in your local time zone.">
+<title>Matchday 26</title>
+<meta name="description" content="Live 2026 FIFA World Cup, cricket, MLB, NFL, college football, NBA and NHL scores with US TV networks — in your local time zone.">
+<meta name="application-name" content="Matchday 26">
+<meta name="apple-mobile-web-app-title" content="Matchday 26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d2a1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root {
     --bg-top: #0d2a1c; --bg-bottom: #051219;
@@ -161,11 +168,12 @@ const LEAGUES = [
   { key: "cricket",  em: "🏏", label: "Cricket" },
   { key: "mlb",      em: "⚾️", label: "MLB", path: "baseball/mlb" },
   { key: "nfl",      em: "🏈", label: "NFL", path: "football/nfl" },
+  { key: "cfb",      em: "🎓", label: "CFB", path: "football/college-football" },
   { key: "nba",      em: "🏀", label: "NBA", path: "basketball/nba" },
   { key: "nhl",      em: "🏒", label: "NHL", path: "hockey/nhl" },
 ];
 const state = { league: "worldCup", tab: "matches", today: [], tomorrow: [], groups: [], bracket: [],
-                mlb: [], nfl: [], nba: [], nhl: [], cricket: [],
+                mlb: [], nfl: [], cfb: [], nba: [], nhl: [], cricket: [],
                 favs: new Set(JSON.parse(localStorage.getItem("favs2") || "[]")),
                 prevScores: {}, goalMsg: null, goalAt: 0, error: null };
 
@@ -260,9 +268,10 @@ async function refresh() {
     ]);
     // other sports are best-effort
     const safe = p => p.catch(() => null);
-    const [mlb1, mlb2, nfl, nba1, nba2, nhl1, nhl2, cricket] = await Promise.all([
+    const [mlb1, mlb2, nfl, cfb, nba1, nba2, nhl1, nhl2, cricket] = await Promise.all([
       safe(getJSON(`${SITE}/baseball/mlb/scoreboard`)), safe(getJSON(`${SITE}/baseball/mlb/scoreboard?dates=${ymd(tmr)}`)),
       safe(getJSON(`${SITE}/football/nfl/scoreboard`)),
+      safe(getJSON(`${SITE}/football/college-football/scoreboard`)),
       safe(getJSON(`${SITE}/basketball/nba/scoreboard`)), safe(getJSON(`${SITE}/basketball/nba/scoreboard?dates=${ymd(tmr)}`)),
       safe(getJSON(`${SITE}/hockey/nhl/scoreboard`)), safe(getJSON(`${SITE}/hockey/nhl/scoreboard?dates=${ymd(tmr)}`)),
       safe(fetchCricket()),
@@ -271,6 +280,9 @@ async function refresh() {
       return [...a, ...b.filter(m => !ids.has(m.id))].sort((x, y) => x.ko - y.ko); };
     if (mlb1) state.mlb = merge(parseBoard(mlb1), mlb2 ? parseBoard(mlb2) : []);
     if (nfl) state.nfl = parseBoard(nfl);
+    if (cfb) state.cfb = parseBoard(cfb)
+      .sort((a, b) => (a.state === "live" ? 0 : 1) - (b.state === "live" ? 0 : 1) || a.ko - b.ko)
+      .slice(0, 30);
     if (nba1) state.nba = merge(parseBoard(nba1), nba2 ? parseBoard(nba2) : []);
     if (nhl1) state.nhl = merge(parseBoard(nhl1), nhl2 ? parseBoard(nhl2) : []);
     if (cricket) state.cricket = cricket;
@@ -308,17 +320,23 @@ async function refresh() {
   render(); updateTitle();
 }
 
+const STATIC_TITLE = "Matchday 26";
+
 function updateTitle() {
+  // Keep the title static while the tab is visible so bookmarks get a
+  // clean name; the live ticker takes over only in background tabs.
+  if (document.visibilityState === "visible") { document.title = STATIC_TITLE; return; }
   if (state.goalMsg && Date.now() - state.goalAt < 18e4) { document.title = state.goalMsg; return; }
   const live = state.today.find(m => m.state === "live" && isFav(m, "worldCup")) || state.today.find(m => m.state === "live");
   if (live) { document.title = `${live.home.ab} ${live.home.score}–${live.away.score} ${live.away.ab} ${live.clock}`; return; }
-  for (const [k, pool, em] of [["nba", state.nba, "🏀"], ["nhl", state.nhl, "🏒"], ["mlb", state.mlb, "⚾️"], ["nfl", state.nfl, "🏈"]]) {
+  for (const [k, pool, em] of [["nba", state.nba, "🏀"], ["nhl", state.nhl, "🏒"], ["mlb", state.mlb, "⚾️"], ["nfl", state.nfl, "🏈"], ["cfb", state.cfb, "🎓"]]) {
     const g = pool.find(m => m.state === "live");
     if (g) { document.title = `${em} ${g.home.ab} ${g.home.score}–${g.away.score} ${g.away.ab}`; return; }
   }
   const next = [...state.today, ...state.tomorrow].find(m => m.state === "pre" && m.ko > new Date());
-  document.title = next ? `⚽️ ${next.home.ab}–${next.away.ab} ${fmtTime(next.ko)}` : "⚽️ World Cup 2026";
+  document.title = next ? `⚽️ ${next.home.ab}–${next.away.ab} ${fmtTime(next.ko)}` : STATIC_TITLE;
 }
+document.addEventListener("visibilitychange", updateTitle);
 
 const isFav = (m, lg) => state.favs.has(`${lg}:${m.home.id}`) || state.favs.has(`${lg}:${m.away.id}`);
 function toggleFav(lg, id) {
