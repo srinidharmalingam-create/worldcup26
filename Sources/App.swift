@@ -371,6 +371,15 @@ struct HeaderView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if let path = Bundle.main.path(forResource: "dog", ofType: "jpg"),
+               let nsImage = NSImage(contentsOfFile: path) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 28, height: 28)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+            }
             Button {
                 showSettings.toggle()
             } label: {
