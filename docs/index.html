@@ -163,7 +163,8 @@ document.addEventListener("click", e => {
 
 const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const LEAGUES = [
-  { key: "softball", em: "🥎", label: "Softball", path: "baseball/college-softball", standings: true, tomorrow: true },
+  { key: "softball", em: "🥎", label: "NCAA SB", path: "baseball/college-softball", standings: true, tomorrow: true },
+  { key: "ausl",     em: "🥎", label: "AUSL", custom: "ausl", standings: true },
   { key: "cricket",  em: "🏏", label: "Cricket" },
   { key: "mlb",      em: "⚾️", label: "MLB", path: "baseball/mlb", standings: true, tomorrow: true },
   { key: "nfl",      em: "🏈", label: "NFL", path: "football/nfl", standings: true },
@@ -179,7 +180,7 @@ const lg = k => LEAGUES.find(l => l.key === k);
 
 const state = {
   view: "guide", subView: "games",
-  games: {}, cricket: [], standings: {}, winProb: {}, expanded: new Set(),
+  games: {}, cricket: [], standings: {}, winProb: {}, expanded: new Set(), auslStandings: null,
   hidden: new Set(JSON.parse(localStorage.getItem("hiddenLg") || "[]")),
   // World Cup favourites are dropped — that league is no longer carried.
   favs: new Set(JSON.parse(localStorage.getItem("favs2") || "[]")
@@ -294,6 +295,28 @@ async function fetchCricket() {
   return out;
 }
 
+// AUSL: our own published feed (theausl.com has no CORS API).
+async function fetchAUSL() {
+  const d = await getJSON("ausl.json");
+  const side = t => ({ id: t.name, name: `${t.city} ${t.name}`.trim(), ab: t.abbrev,
+    logo: "", score: t.score, scoreText: t.score == null ? null : String(t.score),
+    win: false, site: null, periods: [] });
+  const games = (d.games || []).map(g => {
+    const home = side(g.home), away = side(g.away);
+    if (g.state === "post") { home.win = home.score > away.score; away.win = away.score > home.score; }
+    return { id: g.id, ko: new Date(g.dateIso), home, away, state: g.state,
+             clock: "", detail: g.status, venue: g.venue, city: g.city,
+             nets: g.networks || [], link: g.link || null };
+  });
+  const rank = m => m.state === "live" ? 0 : m.state === "pre" ? 1 : 2;
+  games.sort((a, b) => rank(a) - rank(b) || (rank(a) === 2 ? b.ko - a.ko : a.ko - b.ko));
+  const standings = (d.standings || []).length
+    ? [{ name: "AUSL", rows: d.standings.map(r => ({ id: r.name, name: r.name, logo: "",
+        w: r.wins, l: r.losses, pct: r.pct })) }]
+    : [];
+  return { games: games.slice(0, 25), standings };
+}
+
 async function refresh() {
   const tmr = new Date(Date.now() + 864e5);
   const safe = p => p.catch(() => null);
@@ -314,6 +337,7 @@ async function refresh() {
     state.games[l.key] = games;
   });
   jobs.push((async () => { const c = await safe(fetchCricket()); if (c) state.cricket = c; })());
+  jobs.push((async () => { const a = await safe(fetchAUSL()); if (a) { state.games.ausl = a.games; state.auslStandings = a.standings; } })());
   await Promise.all(jobs);
   state.error = Object.keys(state.games).length ? null : "Couldn't reach ESPN — retrying shortly.";
   state.loaded = true;
@@ -522,6 +546,16 @@ function countdownHTML(e) {
 }
 
 function standingsHTML(key) {
+  if (key === "ausl") {
+    const t = state.auslStandings;
+    if (!t) return `<div class="center">Loading standings…</div>`;
+    if (!t.length) return `<div class="center">Standings unavailable</div>`;
+    return t.map(g => `<div class="card"><table>
+      <tr><th>${esc(g.name)}</th><th>W</th><th>L</th><th>PCT</th></tr>
+      ${g.rows.map(r => `<tr class="${state.favs.has("ausl:" + r.id) ? "faved" : ""}">
+        <td class="teamcell">${esc(r.name)}</td><td>${r.w}</td><td>${r.l}</td><td>${esc(r.pct)}</td></tr>`).join("")}
+      </table></div>`).join("");
+  }
   const tables = state.standings[key];
   if (tables === undefined) { loadStandings(key); return `<div class="center">Loading standings…</div>`; }
   if (tables === null) return `<div class="center">Loading standings…</div>`;

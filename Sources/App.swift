@@ -61,6 +61,16 @@ struct MatchdayApp: App {
                 }
             }
             do {
+                let (games, tables) = try await ScoreModel.fetchAUSL()
+                print("OK 🥎 AUSL: \(games.count) games, \(tables.first?.rows.count ?? 0) standings rows")
+                if let g = games.first {
+                    let score = g.state == .pre ? "vs" : "\(g.away.score ?? 0)-\(g.home.score ?? 0)"
+                    print("   \(g.away.abbrev) \(score) \(g.home.abbrev) | \(g.statusDetail) | TV: \(g.networks.joined(separator: ", "))")
+                }
+            } catch {
+                print("FAIL AUSL: \(error)")
+            }
+            do {
                 let cricket = try await ScoreModel.fetchCricket()
                 print("OK 🏏 Cricket: \(cricket.count) series")
                 for s in cricket.prefix(3) {

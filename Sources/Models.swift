@@ -3,13 +3,14 @@ import Foundation
 // MARK: - Leagues
 
 enum SportLeague: String, CaseIterable, Identifiable {
-    case softball, cricket, mlb, nfl, cfb, nba, nhl
+    case softball, ausl, cricket, mlb, nfl, cfb, nba, nhl
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .softball: return "Softball"
+        case .softball: return "NCAA SB"
+        case .ausl: return "AUSL"
         case .cricket: return "Cricket"
         case .mlb: return "MLB"
         case .nfl: return "NFL"
@@ -22,6 +23,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
     var emoji: String {
         switch self {
         case .softball: return "🥎"
+        case .ausl: return "🥎"
         case .cricket: return "🏏"
         case .mlb: return "⚾️"
         case .nfl: return "🏈"
@@ -31,8 +33,8 @@ enum SportLeague: String, CaseIterable, Identifiable {
         }
     }
 
-    /// ESPN scoreboard path. Cricket is discovered dynamically across many
-    /// concurrent series, so it has no single path.
+    /// ESPN scoreboard path. Cricket is discovered dynamically; AUSL comes from
+    /// our own published ausl.json (theausl.com has no CORS API).
     var apiPath: String? {
         switch self {
         case .softball: return "baseball/college-softball"
@@ -41,14 +43,14 @@ enum SportLeague: String, CaseIterable, Identifiable {
         case .cfb: return "football/college-football"
         case .nba: return "basketball/nba"
         case .nhl: return "hockey/nhl"
-        case .cricket: return nil
+        case .cricket, .ausl: return nil
         }
     }
 
-    /// Leagues with a usable ESPN standings table.
+    /// Leagues with a usable standings table.
     var hasStandings: Bool {
         switch self {
-        case .softball, .mlb, .nfl, .nba, .nhl: return true
+        case .softball, .ausl, .mlb, .nfl, .nba, .nhl: return true
         case .cfb, .cricket: return false
         }
     }
@@ -58,9 +60,44 @@ enum SportLeague: String, CaseIterable, Identifiable {
     var fetchesTomorrow: Bool {
         switch self {
         case .softball, .mlb, .nba, .nhl: return true
-        case .nfl, .cfb, .cricket: return false
+        case .nfl, .cfb, .cricket, .ausl: return false
         }
     }
+}
+
+// MARK: - AUSL (published ausl.json)
+
+struct AUSLData: Decodable {
+    let games: [AUSLGame]
+    let standings: [AUSLStanding]
+}
+
+struct AUSLGame: Decodable {
+    let id: String
+    let dateIso: String
+    let state: String
+    let status: String
+    let home: AUSLTeam
+    let away: AUSLTeam
+    let venue: String
+    let city: String
+    let networks: [String]
+    let link: String?
+}
+
+struct AUSLTeam: Decodable {
+    let name: String
+    let abbrev: String
+    let city: String
+    let score: Int?
+}
+
+struct AUSLStanding: Decodable {
+    let name: String
+    let abbrev: String
+    let wins: Int
+    let losses: Int
+    let pct: String
 }
 
 struct LeagueSection: Identifiable {

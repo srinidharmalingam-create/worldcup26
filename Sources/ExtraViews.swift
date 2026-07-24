@@ -286,7 +286,7 @@ struct BoxScoreView: View {
 
     private var periodLabel: String {
         switch league {
-        case .softball, .mlb: return "Inning"
+        case .softball, .ausl, .mlb: return "Inning"
         case .nba, .nfl, .cfb: return "Quarter"
         case .nhl: return "Period"
         case .cricket: return "Innings"

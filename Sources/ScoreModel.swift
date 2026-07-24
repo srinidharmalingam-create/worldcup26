@@ -67,6 +67,7 @@ final class ScoreModel: ObservableObject {
         let tomorrowStr = dayFormatter.string(from: tomorrow)
 
         async let cricketFetch = Self.fetchCricket()
+        async let auslFetch = Self.fetchAUSL()
 
         var fetched: [SportLeague: [Match]] = [:]
         var failures = 0
@@ -102,6 +103,11 @@ final class ScoreModel: ObservableObject {
         if let cricket = try? await cricketFetch {
             cricketSections = cricket
         }
+        if let (games, tables) = try? await auslFetch {
+            detectScoreChanges(.ausl, games)
+            leagueMatches[.ausl] = games
+            usStandings[.ausl] = tables
+        }
 
         lastUpdated = Date()
         errorMessage = fetched.isEmpty && failures > 0
@@ -110,7 +116,10 @@ final class ScoreModel: ObservableObject {
     }
 
     /// Standings are only fetched when a Standings tab is actually opened.
+    /// AUSL loads with the poll (its whole feed is one small file), so nothing
+    /// to do on demand.
     func loadStandings(for league: SportLeague) async {
+        guard league != .ausl else { return }
         guard league.hasStandings, usStandings[league] == nil,
               !standingsLoading.contains(league), let path = league.apiPath else { return }
         standingsLoading.insert(league)
@@ -325,6 +334,47 @@ final class ScoreModel: ObservableObject {
             }
         }
         return sections
+    }
+
+    /// AUSL comes from our own published feed (theausl.com has no CORS API).
+    /// Same-origin `ausl.json` on the web; absolute URL from the Mac app.
+    nonisolated static func fetchAUSL() async throws -> ([Match], [USTable]) {
+        let url = "https://srinidharmalingam-create.github.io/worldcup26/ausl.json"
+        let data = try await getJSON(url, as: AUSLData.self)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+
+        let games: [Match] = data.games.compactMap { g in
+            guard let date = iso.date(from: g.dateIso) ?? ESPNDate.parse(g.dateIso) else { return nil }
+            let state: MatchState = g.state == "live" ? .live : g.state == "post" ? .post : .pre
+            func side(_ t: AUSLTeam, opp: AUSLTeam) -> TeamSide {
+                let won = state == .post && (t.score ?? 0) > (opp.score ?? 0)
+                return TeamSide(id: t.name, name: "\(t.city) \(t.name)".trimmingCharacters(in: .whitespaces),
+                                abbrev: t.abbrev, score: t.score,
+                                scoreText: t.score.map(String.init), logoURL: nil,
+                                winner: won, form: nil, siteURL: nil, periods: [])
+            }
+            return Match(id: g.id, kickoff: date,
+                         home: side(g.home, opp: g.away), away: side(g.away, opp: g.home),
+                         state: state, clock: "", statusDetail: g.status,
+                         venue: g.venue, city: g.city, networks: g.networks,
+                         gamecastURL: g.link.flatMap(URL.init(string:)))
+        }
+        // Season-long feed: surface live, then upcoming (soonest first),
+        // then recently completed (newest first), and cap the list.
+        func rank(_ m: Match) -> Int { m.isLive ? 0 : m.state == .pre ? 1 : 2 }
+        let ordered = games.sorted {
+            let (ra, rb) = (rank($0), rank($1))
+            if ra != rb { return ra < rb }
+            return ra == 2 ? $0.kickoff > $1.kickoff : $0.kickoff < $1.kickoff
+        }
+        let capped = Array(ordered.prefix(25))
+
+        let rows = data.standings.map {
+            USRow(id: $0.name, name: "\($0.name)", logoURL: nil,
+                  wins: $0.wins, losses: $0.losses, pct: $0.pct, gamesBehind: "—")
+        }
+        return (capped, rows.isEmpty ? [] : [USTable(name: "AUSL", rows: rows)])
     }
 
     nonisolated static func fetchStandings(path: String) async throws -> [USTable] {
