@@ -1,42 +1,42 @@
-# ⚽️ WorldCup26
+# 🥎 Matchday
 
-A native macOS menu bar app for the 2026 FIFA World Cup — plus live **cricket, MLB, NFL, NBA, and NHL** scores in the same dashboard. Everything lives in the menu bar — no Dock icon, no notification spam.
+A native macOS menu bar app for live scores across **NCAA softball, cricket, MLB, NFL, college football, NBA and NHL** — with US TV listings, in your local time zone. Everything lives in the menu bar: no Dock icon, no notification spam.
 
 **[⬇ Download the latest release](https://github.com/srinidharmalingam-create/worldcup26/releases/latest)** — unzip, drag to Applications, right-click → Open the first time. macOS 13+, Apple Silicon & Intel.
 
-**🌐 Not on a Mac?** Use the web version on any phone, tablet, or computer: **[srinidharmalingam-create.github.io/worldcup26](https://srinidharmalingam-create.github.io/worldcup26/)** — same live scores, TV networks, groups, and bracket, in your local time zone. (Source in [`docs/`](docs/index.html).)
+**🌐 Not on a Mac?** Use the web version on any phone, tablet, or computer: **[srinidharmalingam-create.github.io/worldcup26](https://srinidharmalingam-create.github.io/worldcup26/)** — same scores, TV networks, and standings. (Source in [`docs/`](docs/index.html).)
 
 ## Features
 
 ### Menu bar ticker
-- **Live score + match clock** while a game is on (e.g. `⚽️ MEX 1–0 RSA 67'`), preferring your starred teams when multiple games are live.
-- **Goal alerts** — when anyone scores, the ticker flashes `🥅 GOAL MEX! MEX 1–0 RSA 24'` for 3 minutes.
-- **Kickoff countdown** — inside the last 10 minutes before the next game it switches to `🔔 USA–PAR in 9m`.
-- Otherwise shows the next kickoff time in your local time zone.
+- **Live score + game clock** for whatever's on (e.g. `⚾️ NYY 4–2 BOS Bot 7th`), with a `+N` count when several games are live.
+- **Score alerts** — when anyone scores, the ticker flashes `⚾️ NYY scores! NYY 4–2 BOS` for 3 minutes.
+- **Start countdown** — inside the last 10 minutes before the next game it switches to `🔔 NYY–BOS in 9m`.
+- Starred teams always win the ticker slot.
 
-### Matches tab
-- Today's matches as cards: flags, big scores, pulsing LIVE badge, venue, **US TV networks** (FOX, FS1, Telemundo, Peacock…) as chips.
-- "LIVE NOW on …" banner pinned on top while games are on; countdown banner otherwise.
-- **★ Follow teams** — star a team to highlight its matches and prioritize it in the ticker.
-- **Recent form** dots (W/D/L) on upcoming matches.
-- **Goals & cards** — expand any live/finished match for scorers, yellow/red cards with minutes.
-- **Add to Calendar** — one click exports the match (with TV networks and a built-in 10-min alarm) to Apple Calendar.
-- **Gamecast link** — open the full ESPN live match page in your browser.
-- Tomorrow's schedule below.
+### 📺 Today
+A cross-sport TV guide: everything live right now plus everything else starting today, in chronological order with the networks carrying it. A countdown banner sits on top when nothing is live yet.
 
-### Groups tab
-All 12 group tables: rank, P/W/D/L, goal difference, points. Top-2 ranks tinted green; your starred teams highlighted.
+### ⭐️ My Teams
+Every live and upcoming game for teams you've starred, across all leagues, in one view.
 
-### Bracket tab
-The full knockout road from the Round of 32 (June 28) to the Final (July 19), with TBD placeholders (e.g. "TBD (2A)") until slots are decided, then live/final scores.
+### League tabs
+Each league gets its own tab with full game cards — logos (or abbreviations where a league has no crests), big scores, pulsing LIVE badges, venue, and TV network chips.
 
-### Other sports (league picker)
-Switch between ⚽️ World Cup, 🏏 Cricket, ⚾️ MLB, 🏈 NFL, 🏀 NBA, and 🏒 NHL. Cricket auto-discovers the top active series worldwide (ICC events first) with full innings scores; the US leagues show the same score cards and TV networks as the World Cup. When no World Cup match is on, live games from the other leagues take over the menu bar ticker. Starred favorites work per-league.
+- **Box scores** — expand any finished or in-progress game for inning/quarter/period line scores, plus **live win probability**.
+- **Standings** — a Games/Standings toggle for softball, MLB, NFL, NBA and NHL.
+- **Cricket** auto-discovers the top active series worldwide (ICC events first) with full innings scorelines.
+- **Team links** — click any team name or crest to open its ESPN page.
+- **Add to Calendar** — export an upcoming game with its TV networks and a 10-minute alarm.
 
 ### Settings (gear icon)
-Toggle goal alerts, the kickoff countdown, and the form guide. "Start at login" lives in the footer.
+Toggle score alerts and the start countdown, and hide any leagues you don't follow — hidden leagues disappear from the picker, the ticker, and the Today guide. "Start at login" lives in the footer.
 
-All times are formatted by macOS using the computer's current time zone, automatically. Data refreshes every 2 minutes (45 seconds during live matches) from ESPN's public scoreboard API — no API key required. Broadcast listings are US national networks.
+All times are formatted by macOS using the computer's current time zone. Data refreshes every 2 minutes (45 seconds while anything is live) from ESPN's public scoreboard API — no API key required. Broadcast listings are US national networks.
+
+## Season note
+
+Leagues only show games when they're in season. NCAA softball runs February–June (Women's College World Series in early June); MLB April–October; NFL/CFB September–January; NBA/NHL October–June; cricket runs year-round somewhere in the world. Out of season, a league tab shows its last result and standings.
 
 ## Running it
 
@@ -46,14 +46,6 @@ open WorldCup26.app
 
 Quit via the power button in the dashboard footer.
 
-## Sharing with other Macs
-
-`WorldCup26.zip` contains the app. It's a universal binary — works on Apple Silicon and Intel, macOS 13 Ventura or newer. It's ad-hoc signed (not notarized), so on another Mac the first launch may be blocked by Gatekeeper. Either **right-click the app → Open → Open**, or run:
-
-```
-xattr -dr com.apple.quarantine WorldCup26.app
-```
-
 ## Building from source
 
 Requires Xcode Command Line Tools (any recent Swift).
@@ -62,7 +54,7 @@ Requires Xcode Command Line Tools (any recent Swift).
 ./build.sh
 ```
 
-Produces `WorldCup26.app` and `WorldCup26.zip`. Sources are in `Sources/`, the icon is generated by `scripts/make_icon.swift`.
+Produces `WorldCup26.app` and `WorldCup26.zip` — a universal binary for Apple Silicon and Intel.
 
 ## Sanity check
 
@@ -70,4 +62,4 @@ Produces `WorldCup26.app` and `WorldCup26.zip`. Sources are in `Sources/`, the i
 WorldCup26.app/Contents/MacOS/WorldCup26 --test
 ```
 
-prints today's matches, group standings, and bracket rounds fetched from ESPN.
+prints today's games, standings, and cricket series fetched from ESPN for every league.

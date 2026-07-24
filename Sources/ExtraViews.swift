@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Top-level picker (guide / my teams / leagues)
+// MARK: - Top-level picker (Today / My Teams / leagues)
 
 struct TopPicker: View {
     @Binding var selected: MainTab
@@ -43,7 +43,7 @@ struct TopPicker: View {
     }
 }
 
-// MARK: - Cross-sport TV guide ("What to watch today")
+// MARK: - Cross-sport TV guide ("What's on today")
 
 struct GuideView: View {
     @ObservedObject var model: ScoreModel
@@ -54,9 +54,16 @@ struct GuideView: View {
         let upcoming = entries.filter { !$0.match.isLive }
         VStack(spacing: 8) {
             if entries.isEmpty {
-                Text("Nothing on today")
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 24)
+                if model.lastUpdated == nil {
+                    ProgressView("Loading today's games…").padding(.vertical, 30)
+                } else {
+                    Text("Nothing on today")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 24)
+                }
+            }
+            if live.isEmpty, let next = upcoming.first {
+                CountdownBanner(entry: next)
             }
             if !live.isEmpty {
                 SectionLabel(text: "Live now")
@@ -68,6 +75,42 @@ struct GuideView: View {
             }
         }
         .padding(12)
+    }
+}
+
+struct CountdownBanner: View {
+    let entry: GuideEntry
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = entry.match.kickoff.timeIntervalSince(context.date)
+            let soon = remaining <= 600
+            HStack(spacing: 8) {
+                Image(systemName: soon ? "bell.badge.fill" : "clock.fill")
+                    .foregroundStyle(soon ? .red : .yellow)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(entry.league.emoji) \(entry.match.home.abbrev) v \(entry.match.away.abbrev)")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    Text(soon ? "Starting soon — get to a screen!" : "Next up")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(countdown(remaining))
+                    .font(.system(.title3, design: .monospaced).weight(.bold))
+                    .foregroundStyle(soon ? .red : .yellow)
+            }
+            .padding(12)
+            .background((soon ? Color.red : Color.yellow).opacity(0.1),
+                        in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func countdown(_ interval: TimeInterval) -> String {
+        let s = max(0, Int(interval))
+        let h = s / 3600, m = (s % 3600) / 60, sec = s % 60
+        return h > 0 ? String(format: "%dh %02dm", h, m)
+                     : String(format: "%dm %02ds", m, sec)
     }
 }
 
@@ -101,9 +144,7 @@ struct GuideRow: View {
                             .font(.system(size: 7))
                             .foregroundStyle(.yellow)
                     }
-                    Text(m.isLive && m.home.score != nil
-                         ? "\(m.home.abbrev) \(m.home.score ?? 0)–\(m.away.score ?? 0) \(m.away.abbrev)"
-                         : "\(m.home.abbrev) v \(m.away.abbrev)")
+                    Text(scoreLine(m))
                         .font(.system(.caption, design: .rounded).weight(.semibold))
                 }
                 if !m.networks.isEmpty {
@@ -130,6 +171,15 @@ struct GuideRow: View {
         .background(.white.opacity(m.isLive ? 0.08 : 0.04),
                     in: RoundedRectangle(cornerRadius: 10))
     }
+
+    private func scoreLine(_ m: Match) -> String {
+        guard m.isLive else { return "\(m.home.abbrev) v \(m.away.abbrev)" }
+        if entry.league == .cricket { return "\(m.home.abbrev) v \(m.away.abbrev)" }
+        guard let h = m.home.score, let a = m.away.score else {
+            return "\(m.home.abbrev) v \(m.away.abbrev)"
+        }
+        return "\(m.home.abbrev) \(h)–\(a) \(m.away.abbrev)"
+    }
 }
 
 // MARK: - My Teams
@@ -153,7 +203,7 @@ struct MyTeamsView: View {
                 .padding(.vertical, 30)
                 .padding(.horizontal, 20)
             } else if entries.isEmpty {
-                Text("No upcoming games for your teams")
+                Text("No games right now for your teams")
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 24)
             }
@@ -169,72 +219,28 @@ struct MyTeamsView: View {
     }
 }
 
-// MARK: - Golden Boot (World Cup top scorers)
+// MARK: - Standings
 
-struct ScorersTab: View {
-    @ObservedObject var model: ScoreModel
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Text("Golden Boot Race")
-                .font(.system(.caption, design: .rounded).weight(.bold))
-                .foregroundStyle(.yellow)
-                .padding(.top, 4)
-            if model.scorers.isEmpty {
-                if model.scorersLoading {
-                    ProgressView("Loading scorers…").padding(.vertical, 24)
-                } else {
-                    Text("No goals yet")
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 24)
-                }
-            }
-            ForEach(Array(model.scorers.enumerated()), id: \.element.id) { index, scorer in
-                HStack(spacing: 8) {
-                    Text("\(index + 1)")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(index == 0 ? .yellow : .secondary)
-                        .frame(width: 18, alignment: .trailing)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(scorer.name)
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                        if !scorer.teamName.isEmpty {
-                            Text(scorer.teamName)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    Text("⚽️ \(scorer.goals)")
-                        .font(.system(.caption, design: .rounded).weight(.heavy))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.white.opacity(index == 0 ? 0.08 : 0.04),
-                            in: RoundedRectangle(cornerRadius: 10))
-            }
-        }
-        .padding(12)
-        .task { await model.loadScorers() }
-    }
-}
-
-// MARK: - US league standings
-
-struct USStandingsView: View {
+struct StandingsView: View {
     let league: SportLeague
     @ObservedObject var model: ScoreModel
 
     var body: some View {
         VStack(spacing: 10) {
-            if let tables = model.usStandings[league], !tables.isEmpty {
+            if let tables = model.usStandings[league] {
+                if tables.isEmpty {
+                    Text("Standings unavailable")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 24)
+                }
                 ForEach(tables) { table in
                     VStack(spacing: 6) {
                         HStack {
                             Text(table.name)
                                 .font(.system(.caption, design: .rounded).weight(.bold))
+                                .lineLimit(1)
                             Spacer()
-                            Text("W    L    PCT     GB")
+                            Text("W    L    PCT")
                                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
@@ -255,10 +261,7 @@ struct USStandingsView: View {
                                     .foregroundStyle(isFavorite ? .yellow : .primary)
                                     .lineLimit(1)
                                 Spacer()
-                                Text(String(format: "%3d  %3d  %@  %@",
-                                            row.wins, row.losses,
-                                            row.pct.padding(toLength: 5, withPad: " ", startingAt: 0),
-                                            row.gamesBehind))
+                                Text(String(format: "%3d  %3d  %@", row.wins, row.losses, row.pct))
                                     .font(.system(size: 10, design: .monospaced))
                             }
                         }
@@ -270,6 +273,7 @@ struct USStandingsView: View {
                 ProgressView("Loading standings…").padding(.vertical, 24)
             }
         }
+        .task(id: league) { await model.loadStandings(for: league) }
     }
 }
 
@@ -282,21 +286,21 @@ struct BoxScoreView: View {
 
     private var periodLabel: String {
         switch league {
-        case .mlb: return "Inning"
+        case .softball, .mlb: return "Inning"
         case .nba, .nfl, .cfb: return "Quarter"
         case .nhl: return "Period"
-        default: return "Period"
+        case .cricket: return "Innings"
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if match.home.periods.isEmpty && match.away.periods.isEmpty {
+            let count = max(match.home.periods.count, match.away.periods.count)
+            if count == 0 {
                 Text("Box score not available yet")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
-                let count = max(match.home.periods.count, match.away.periods.count)
                 Grid(horizontalSpacing: 7, verticalSpacing: 3) {
                     GridRow {
                         Text(periodLabel)
@@ -308,8 +312,8 @@ struct BoxScoreView: View {
                     }
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.secondary)
-                    boxRow(match.home)
-                    boxRow(match.away)
+                    boxRow(match.home, count: count)
+                    boxRow(match.away, count: count)
                 }
             }
             if match.isLive, let pct = model.winProb[match.id] {
@@ -343,9 +347,8 @@ struct BoxScoreView: View {
         }
     }
 
-    private func boxRow(_ side: TeamSide) -> some View {
-        let count = max(match.home.periods.count, match.away.periods.count)
-        return GridRow {
+    private func boxRow(_ side: TeamSide, count: Int) -> some View {
+        GridRow {
             Text(side.abbrev)
                 .fontWeight(.bold)
                 .gridColumnAlignment(.leading)

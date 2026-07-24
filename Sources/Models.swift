@@ -3,13 +3,13 @@ import Foundation
 // MARK: - Leagues
 
 enum SportLeague: String, CaseIterable, Identifiable {
-    case worldCup, cricket, mlb, nfl, cfb, nba, nhl
+    case softball, cricket, mlb, nfl, cfb, nba, nhl
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .worldCup: return "World Cup"
+        case .softball: return "Softball"
         case .cricket: return "Cricket"
         case .mlb: return "MLB"
         case .nfl: return "NFL"
@@ -21,7 +21,7 @@ enum SportLeague: String, CaseIterable, Identifiable {
 
     var emoji: String {
         switch self {
-        case .worldCup: return "⚽️"
+        case .softball: return "🥎"
         case .cricket: return "🏏"
         case .mlb: return "⚾️"
         case .nfl: return "🏈"
@@ -31,16 +31,34 @@ enum SportLeague: String, CaseIterable, Identifiable {
         }
     }
 
-    /// ESPN API path for the standard scoreboard leagues. Cricket is
-    /// discovered dynamically; the World Cup has its own fetchers.
+    /// ESPN scoreboard path. Cricket is discovered dynamically across many
+    /// concurrent series, so it has no single path.
     var apiPath: String? {
         switch self {
+        case .softball: return "baseball/college-softball"
         case .mlb: return "baseball/mlb"
         case .nfl: return "football/nfl"
         case .cfb: return "football/college-football"
         case .nba: return "basketball/nba"
         case .nhl: return "hockey/nhl"
-        default: return nil
+        case .cricket: return nil
+        }
+    }
+
+    /// Leagues with a usable ESPN standings table.
+    var hasStandings: Bool {
+        switch self {
+        case .softball, .mlb, .nfl, .nba, .nhl: return true
+        case .cfb, .cricket: return false
+        }
+    }
+
+    /// Leagues that also pull tomorrow's slate, so a quiet evening still
+    /// shows what's next.
+    var fetchesTomorrow: Bool {
+        switch self {
+        case .softball, .mlb, .nba, .nhl: return true
+        case .nfl, .cfb, .cricket: return false
         }
     }
 }
@@ -67,13 +85,8 @@ struct SBEvent: Decodable {
     let date: String
     let name: String
     let shortName: String
-    let season: SBSeasonRef?
     let links: [SBLink]?
     let competitions: [SBCompetition]
-}
-
-struct SBSeasonRef: Decodable {
-    let slug: String?
 }
 
 struct SBLink: Decodable {
@@ -94,7 +107,6 @@ struct SBCompetitor: Decodable {
     let winner: Bool?
     let form: String?
     let team: SBTeam
-
     let linescores: [SBLineScore]?
 
     enum CodingKeys: String, CodingKey { case homeAway, score, winner, form, team, linescores }
@@ -177,7 +189,7 @@ struct CHEvent: Decodable {
     let status: String?
 }
 
-// MARK: - ESPN standings types
+// MARK: - Standings
 
 struct StandingsResponse: Decodable {
     let children: [SBGroup]?
@@ -213,43 +225,12 @@ struct SBStat: Decodable {
     let value: Double?
 }
 
-// MARK: - ESPN match summary types
-
-struct SummaryResponse: Decodable {
-    let keyEvents: [SBKeyEvent]?
+struct WinProbResponse: Decodable {
+    let winprobability: [WPEntry]?
 }
 
-struct SBKeyEvent: Decodable {
-    let id: String?
-    let type: SBKeyEventType?
-    let shortText: String?
-    let text: String?
-    let clock: SBKeyEventClock?
-    let scoringPlay: Bool?
-    let team: SBKeyEventTeam?
-    let participants: [SBParticipant]?
-}
-
-struct SBKeyEventType: Decodable {
-    let text: String?
-    let type: String?
-}
-
-struct SBKeyEventClock: Decodable {
-    let displayValue: String?
-}
-
-struct SBKeyEventTeam: Decodable {
-    let id: String?
-    let displayName: String?
-}
-
-struct SBParticipant: Decodable {
-    let athlete: SBAthlete?
-}
-
-struct SBAthlete: Decodable {
-    let displayName: String?
+struct WPEntry: Decodable {
+    let homeWinPercentage: Double?
 }
 
 // MARK: - App-facing models
@@ -278,43 +259,14 @@ struct Match: Identifiable {
     let away: TeamSide
     let state: MatchState
     let clock: String
-    let statusDetail: String   // "Q4 2:31", "Stumps", "Day 2", "Final/OT"
+    let statusDetail: String   // "Q4 2:31", "Stumps", "Bot 7th", "Final/OT"
     let venue: String
     let city: String
     let networks: [String]
-    let roundSlug: String
     let gamecastURL: URL?
 
     var isLive: Bool { state == .live }
 }
-
-struct GroupRow: Identifiable {
-    let id: String
-    let name: String
-    let logoURL: URL?
-    let rank: Int
-    let played: Int
-    let wins: Int
-    let draws: Int
-    let losses: Int
-    let goalDiff: String
-    let points: Int
-}
-
-struct GroupTable: Identifiable {
-    var id: String { name }
-    let name: String
-    let rows: [GroupRow]
-}
-
-struct BracketRound: Identifiable {
-    var id: String { slug }
-    let slug: String
-    let title: String
-    let matches: [Match]
-}
-
-// MARK: - US league standings / scorers / views
 
 struct USRow: Identifiable {
     let id: String
@@ -332,13 +284,6 @@ struct USTable: Identifiable {
     let rows: [USRow]
 }
 
-struct Scorer: Identifiable {
-    let id: String
-    let name: String
-    let teamName: String
-    let goals: Int
-}
-
 enum MainTab: Hashable {
     case guide, mine
     case league(SportLeague)
@@ -350,74 +295,8 @@ struct GuideEntry: Identifiable {
     let match: Match
 }
 
-// Core-API decodables for the goals-leaders endpoint
-struct CoreLeaders: Decodable {
-    let categories: [CoreCategory]?
-}
-
-struct CoreCategory: Decodable {
-    let name: String?
-    let leaders: [CoreLeader]?
-}
-
-struct CoreLeader: Decodable {
-    let value: Double?
-    let athlete: CoreRef?
-    let team: CoreRef?
-}
-
-struct CoreRef: Decodable {
-    let ref: String?
-    enum CodingKeys: String, CodingKey { case ref = "$ref" }
-}
-
-struct CoreAthlete: Decodable {
-    let id: String?
-    let displayName: String?
-    let fullName: String?
-}
-
-struct WinProbResponse: Decodable {
-    let winprobability: [WPEntry]?
-}
-
-struct WPEntry: Decodable {
-    let homeWinPercentage: Double?
-}
-
-enum MatchEventKind {
-    case goal, ownGoal, penalty, yellow, red
-
-    var emoji: String {
-        switch self {
-        case .goal: return "⚽️"
-        case .ownGoal: return "🥅"
-        case .penalty: return "⚽️"
-        case .yellow: return "🟨"
-        case .red: return "🟥"
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .goal: return ""
-        case .ownGoal: return "(own goal)"
-        case .penalty: return "(pen)"
-        case .yellow: return ""
-        case .red: return ""
-        }
-    }
-}
-
-struct MatchEvent: Identifiable {
-    let id: String
-    let kind: MatchEventKind
-    let minute: String
-    let player: String
-    let teamId: String
-}
-
-struct GoalAlert {
+/// A score change worth flashing in the menu bar.
+struct ScoreAlert {
     let text: String
     let at: Date
 }
@@ -457,25 +336,5 @@ enum NetworkNames {
             }
         }
         return out
-    }
-}
-
-enum RoundNames {
-    static let titles: [String: String] = [
-        "group-stage": "Group Stage",
-        "round-of-32": "Round of 32",
-        "round-of-16": "Round of 16",
-        "quarterfinals": "Quarterfinals",
-        "quarterfinal": "Quarterfinals",
-        "semifinals": "Semifinals",
-        "semifinal": "Semifinals",
-        "3rd-place-match": "Third Place",
-        "third-place-match": "Third Place",
-        "final": "Final",
-    ]
-
-    static func title(for slug: String) -> String {
-        if let t = titles[slug] { return t }
-        return slug.split(separator: "-").map { $0.capitalized }.joined(separator: " ")
     }
 }

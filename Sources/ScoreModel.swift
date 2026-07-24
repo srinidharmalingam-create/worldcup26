@@ -2,68 +2,41 @@ import Foundation
 
 @MainActor
 final class ScoreModel: ObservableObject {
-    @Published var todayMatches: [Match] = []
-    @Published var tomorrowMatches: [Match] = []
-    @Published var groups: [GroupTable] = []
-    @Published var bracket: [BracketRound] = []
-    @Published var matchDetails: [String: [MatchEvent]] = [:]
-    @Published var mlbMatches: [Match] = []
-    @Published var nflMatches: [Match] = []
-    @Published var cfbMatches: [Match] = []
-    @Published var nbaMatches: [Match] = []
-    @Published var nhlMatches: [Match] = []
+    @Published var leagueMatches: [SportLeague: [Match]] = [:]
     @Published var cricketSections: [LeagueSection] = []
     @Published var usStandings: [SportLeague: [USTable]] = [:]
-    @Published var scorers: [Scorer] = []
-    @Published var scorersLoading = false
-    @Published var winProb: [String: Double] = [:]   // eventId -> home win %
+    @Published var winProb: [String: Double] = [:]
     @Published var lastUpdated: Date?
     @Published var errorMessage: String?
-    @Published var goalAlert: GoalAlert?
+    @Published var scoreAlert: ScoreAlert?
 
     // Keys are "<league>:<teamId>" so ids can't collide across sports.
     @Published var favorites: Set<String> {
         didSet { UserDefaults.standard.set(Array(favorites), forKey: "favoriteTeamIDs") }
     }
-    @Published var goalAlertsEnabled: Bool {
-        didSet { UserDefaults.standard.set(goalAlertsEnabled, forKey: "goalAlertsEnabled") }
+    @Published var scoreAlertsEnabled: Bool {
+        didSet { UserDefaults.standard.set(scoreAlertsEnabled, forKey: "goalAlertsEnabled") }
     }
     @Published var countdownAlertEnabled: Bool {
         didSet { UserDefaults.standard.set(countdownAlertEnabled, forKey: "countdownAlertEnabled") }
-    }
-    @Published var showFormGuide: Bool {
-        didSet { UserDefaults.standard.set(showFormGuide, forKey: "showFormGuide") }
     }
     @Published var hiddenLeagues: Set<String> {
         didSet { UserDefaults.standard.set(Array(hiddenLeagues), forKey: "hiddenLeagues") }
     }
 
-    var visibleLeagues: [SportLeague] {
-        SportLeague.allCases.filter { $0 == .worldCup || !hiddenLeagues.contains($0.rawValue) }
-    }
-
-    func isHidden(_ league: SportLeague) -> Bool {
-        hiddenLeagues.contains(league.rawValue)
-    }
-
-    func setHidden(_ league: SportLeague, _ hidden: Bool) {
-        if hidden { hiddenLeagues.insert(league.rawValue) }
-        else { hiddenLeagues.remove(league.rawValue) }
-    }
-
     private var pollTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
+    private var standingsLoading: Set<SportLeague> = []
     private var previousScores: [String: (Int, Int)] = [:]
 
     init(startPolling: Bool = true) {
         let defaults = UserDefaults.standard
-        let saved = defaults.stringArray(forKey: "favoriteTeamIDs") ?? []
-        // Migrate pre-multi-sport favorites (bare soccer team ids)
-        favorites = Set(saved.map { $0.contains(":") ? $0 : "worldCup:\($0)" })
-        hiddenLeagues = Set(defaults.stringArray(forKey: "hiddenLeagues") ?? [])
-        goalAlertsEnabled = defaults.object(forKey: "goalAlertsEnabled") as? Bool ?? true
+        // Drop stale World Cup favorites — that league is no longer carried.
+        favorites = Set((defaults.stringArray(forKey: "favoriteTeamIDs") ?? [])
+            .filter { $0.contains(":") && !$0.hasPrefix("worldCup:") })
+        scoreAlertsEnabled = defaults.object(forKey: "goalAlertsEnabled") as? Bool ?? true
         countdownAlertEnabled = defaults.object(forKey: "countdownAlertEnabled") as? Bool ?? true
-        showFormGuide = defaults.object(forKey: "showFormGuide") as? Bool ?? true
+        hiddenLeagues = Set(defaults.stringArray(forKey: "hiddenLeagues") ?? [])
 
         guard startPolling else { return }
         pollTask = Task { [weak self] in
@@ -74,8 +47,8 @@ final class ScoreModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
             }
         }
-        // Re-render the menu bar label every 30s so the kickoff countdown
-        // and goal-alert expiry stay current between polls.
+        // Re-render the menu bar label every 30s so the countdown and
+        // score-alert expiry stay current between polls.
         tickTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 30 * 1_000_000_000)
@@ -84,69 +57,79 @@ final class ScoreModel: ObservableObject {
         }
     }
 
+    // MARK: - Refresh
+
     func refresh() async {
-        do {
-            let dayFormatter = DateFormatter()
-            dayFormatter.locale = Locale(identifier: "en_US_POSIX")
-            dayFormatter.dateFormat = "yyyyMMdd"
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-            let tomorrowStr = dayFormatter.string(from: tomorrow)
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.dateFormat = "yyyyMMdd"
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+        let tomorrowStr = dayFormatter.string(from: tomorrow)
 
-            async let todayFetch = Self.fetchScoreboard(league: "soccer/fifa.world", dates: nil)
-            async let tomorrowFetch = Self.fetchScoreboard(league: "soccer/fifa.world", dates: tomorrowStr)
-            async let standingsFetch = Self.fetchStandings()
-            async let bracketFetch = Self.fetchBracket()
-            async let mlbFetch = Self.fetchDayPlusTomorrow(league: "baseball/mlb", tomorrow: tomorrowStr)
-            async let nflFetch = Self.fetchScoreboard(league: "football/nfl", dates: nil)
-            async let cfbFetch = Self.fetchScoreboard(league: "football/college-football", dates: nil)
-            async let nbaFetch = Self.fetchDayPlusTomorrow(league: "basketball/nba", tomorrow: tomorrowStr)
-            async let nhlFetch = Self.fetchDayPlusTomorrow(league: "hockey/nhl", tomorrow: tomorrowStr)
-            async let cricketFetch = Self.fetchCricket()
-            async let mlbStandingsFetch = Self.fetchUSStandings(path: "baseball/mlb")
-            async let nflStandingsFetch = Self.fetchUSStandings(path: "football/nfl")
-            async let nbaStandingsFetch = Self.fetchUSStandings(path: "basketball/nba")
-            async let nhlStandingsFetch = Self.fetchUSStandings(path: "hockey/nhl")
+        async let cricketFetch = Self.fetchCricket()
 
-            let (today, next, standings, rounds) = try await (todayFetch, tomorrowFetch, standingsFetch, bracketFetch)
-            // Secondary sports shouldn't take down the World Cup view
-            mlbMatches = (try? await mlbFetch) ?? mlbMatches
-            nflMatches = (try? await nflFetch)?.sorted { $0.kickoff < $1.kickoff } ?? nflMatches
-            cfbMatches = (try? await cfbFetch).map {
-                Array($0.sorted { ($0.isLive ? 0 : 1, $0.kickoff) < ($1.isLive ? 0 : 1, $1.kickoff) }.prefix(30))
-            } ?? cfbMatches
-            nbaMatches = (try? await nbaFetch) ?? nbaMatches
-            nhlMatches = (try? await nhlFetch) ?? nhlMatches
-            cricketSections = (try? await cricketFetch) ?? cricketSections
-            if let t = try? await mlbStandingsFetch { usStandings[.mlb] = t }
-            if let t = try? await nflStandingsFetch { usStandings[.nfl] = t }
-            if let t = try? await nbaStandingsFetch { usStandings[.nba] = t }
-            if let t = try? await nhlStandingsFetch { usStandings[.nhl] = t }
+        var fetched: [SportLeague: [Match]] = [:]
+        var failures = 0
+        await withTaskGroup(of: (SportLeague, [Match])?.self) { group in
+            for league in SportLeague.allCases {
+                guard let path = league.apiPath else { continue }
+                let alsoTomorrow = league.fetchesTomorrow
+                group.addTask {
+                    do {
+                        let matches = alsoTomorrow
+                            ? try await Self.fetchDayPlusTomorrow(league: path, tomorrow: tomorrowStr)
+                            : try await Self.fetchScoreboard(league: path, dates: nil)
+                        return (league, matches)
+                    } catch {
+                        return nil
+                    }
+                }
+            }
+            for await result in group {
+                if let (league, matches) = result {
+                    fetched[league] = matches
+                } else {
+                    failures += 1
+                }
+            }
+        }
 
-            detectGoals(in: today)
+        // Keep the previous slate for any league that failed this cycle.
+        for (league, matches) in fetched {
+            detectScoreChanges(league, matches)
+            leagueMatches[league] = matches
+        }
+        if let cricket = try? await cricketFetch {
+            cricketSections = cricket
+        }
 
-            let todayIDs = Set(today.map(\.id))
-            todayMatches = today.sorted { $0.kickoff < $1.kickoff }
-            tomorrowMatches = next.filter { !todayIDs.contains($0.id) }
-                .sorted { $0.kickoff < $1.kickoff }
-            groups = standings
-            bracket = rounds
-            lastUpdated = Date()
-            errorMessage = nil
-        } catch {
-            errorMessage = "Couldn't reach ESPN: \(error.localizedDescription)"
+        lastUpdated = Date()
+        errorMessage = fetched.isEmpty && failures > 0
+            ? "Couldn't reach ESPN — retrying shortly."
+            : nil
+    }
+
+    /// Standings are only fetched when a Standings tab is actually opened.
+    func loadStandings(for league: SportLeague) async {
+        guard league.hasStandings, usStandings[league] == nil,
+              !standingsLoading.contains(league), let path = league.apiPath else { return }
+        standingsLoading.insert(league)
+        defer { standingsLoading.remove(league) }
+        if let tables = try? await Self.fetchStandings(path: path) {
+            usStandings[league] = tables
+        } else {
+            usStandings[league] = []
         }
     }
 
-    func loadDetails(for matchId: String) async {
-        do {
-            let events = try await Self.fetchSummary(eventId: matchId)
-            matchDetails[matchId] = events
-        } catch {
-            matchDetails[matchId] = []
-        }
+    func loadWinProb(league: SportLeague, matchId: String) async {
+        guard let path = league.apiPath, winProb[matchId] == nil else { return }
+        let url = "https://site.api.espn.com/apis/site/v2/sports/\(path)/summary?event=\(matchId)"
+        guard let pct = try? await Self.getWinProb(url) else { return }
+        winProb[matchId] = pct
     }
 
-    // MARK: - Favorites
+    // MARK: - Favorites & visibility
 
     static func favKey(_ league: SportLeague, _ teamId: String) -> String {
         "\(league.rawValue):\(teamId)"
@@ -165,19 +148,37 @@ final class ScoreModel: ObservableObject {
         }
     }
 
-    func isFavoriteMatch(_ match: Match, league: SportLeague = .worldCup) -> Bool {
+    func isFavoriteMatch(_ match: Match, league: SportLeague) -> Bool {
         isFavorite(league, match.home.id) || isFavorite(league, match.away.id)
     }
 
-    // MARK: - Goal detection (menu bar alerts, World Cup only)
+    var visibleLeagues: [SportLeague] {
+        let shown = SportLeague.allCases.filter { !hiddenLeagues.contains($0.rawValue) }
+        // Never leave the picker empty.
+        return shown.isEmpty ? SportLeague.allCases : shown
+    }
 
-    private func detectGoals(in matches: [Match]) {
+    func isHidden(_ league: SportLeague) -> Bool {
+        hiddenLeagues.contains(league.rawValue)
+    }
+
+    func setHidden(_ league: SportLeague, _ hidden: Bool) {
+        if hidden { hiddenLeagues.insert(league.rawValue) }
+        else { hiddenLeagues.remove(league.rawValue) }
+    }
+
+    // MARK: - Score alerts (menu bar)
+
+    private func detectScoreChanges(_ league: SportLeague, _ matches: [Match]) {
         for match in matches where match.state != .pre {
             guard let h = match.home.score, let a = match.away.score else { continue }
-            if let (prevH, prevA) = previousScores[match.id], h + a > prevH + prevA {
+            if let (prevH, prevA) = previousScores[match.id], h + a > prevH + prevA,
+               !isHidden(league) {
                 let scorer = h > prevH ? match.home : match.away
-                goalAlert = GoalAlert(
-                    text: "🥅 GOAL \(scorer.abbrev)! \(match.home.abbrev) \(h)–\(a) \(match.away.abbrev) \(match.clock)",
+                let detail = match.statusDetail.isEmpty ? match.clock : match.statusDetail
+                scoreAlert = ScoreAlert(
+                    text: "\(league.emoji) \(scorer.abbrev) scores! \(match.home.abbrev) \(h)–\(a) \(match.away.abbrev)"
+                        + (detail.isEmpty ? "" : " · \(detail)"),
                     at: Date())
             }
             previousScores[match.id] = (h, a)
@@ -186,188 +187,78 @@ final class ScoreModel: ObservableObject {
 
     // MARK: - Derived state
 
-    var liveMatches: [Match] {
-        todayMatches.filter { $0.isLive }
+    func matches(for league: SportLeague) -> [Match] {
+        league == .cricket ? cricketSections.flatMap(\.matches) : (leagueMatches[league] ?? [])
     }
 
-    var liveMatch: Match? {
-        liveMatches.first { isFavoriteMatch($0) } ?? liveMatches.first
+    private var visibleGames: [(SportLeague, Match)] {
+        visibleLeagues.flatMap { league in matches(for: league).map { (league, $0) } }
     }
 
     var anyLive: Bool {
-        !liveMatches.isEmpty
-            || mlbMatches.contains { $0.isLive }
-            || nbaMatches.contains { $0.isLive }
-            || nhlMatches.contains { $0.isLive }
-            || nflMatches.contains { $0.isLive }
-            || cfbMatches.contains { $0.isLive }
+        visibleGames.contains { $0.1.isLive }
     }
 
-    var nextMatch: Match? {
-        (todayMatches + tomorrowMatches)
-            .filter { $0.state == .pre && $0.kickoff > Date() }
-            .min { $0.kickoff < $1.kickoff }
+    /// Live game to headline the menu bar — a starred team wins the slot.
+    private var headlineLive: (SportLeague, Match)? {
+        let live = visibleGames.filter { $0.1.isLive }
+        return live.first { isFavoriteMatch($0.1, league: $0.0) } ?? live.first
     }
 
-    func matches(for league: SportLeague) -> [Match] {
-        switch league {
-        case .worldCup: return todayMatches
-        case .mlb: return mlbMatches
-        case .nfl: return nflMatches
-        case .cfb: return cfbMatches
-        case .nba: return nbaMatches
-        case .nhl: return nhlMatches
-        case .cricket: return cricketSections.flatMap(\.matches)
-        }
+    private var nextGame: (SportLeague, Match)? {
+        let now = Date()
+        let upcoming = visibleGames.filter { $0.1.state == .pre && $0.1.kickoff > now }
+        return upcoming.first { isFavoriteMatch($0.1, league: $0.0) && $0.1.kickoff.timeIntervalSince(now) < 3600 }
+            ?? upcoming.min { $0.1.kickoff < $1.1.kickoff }
     }
 
-    /// Live game from the other (non-World Cup) leagues, favorites first.
-    private var liveOther: (SportLeague, Match)? {
-        let pools: [(SportLeague, [Match])] = [
-            (.nba, nbaMatches), (.nhl, nhlMatches), (.mlb, mlbMatches),
-            (.nfl, nflMatches), (.cfb, cfbMatches),
-            (.cricket, cricketSections.flatMap(\.matches)),
-        ].filter { !isHidden($0.0) }
-        var firstLive: (SportLeague, Match)?
-        for (league, pool) in pools {
-            for m in pool where m.isLive {
-                if isFavoriteMatch(m, league: league) { return (league, m) }
-                if firstLive == nil { firstLive = (league, m) }
-            }
-        }
-        return firstLive
-    }
-
-    /// Cross-sport TV guide: live games plus everything starting today.
-    var guideEntries: [GuideEntry] {
-        var out: [GuideEntry] = []
-        let cal = Calendar.current
-        for league in visibleLeagues {
-            for m in matches(for: league) where m.state != .post {
-                if m.isLive || cal.isDateInToday(m.kickoff) {
-                    out.append(GuideEntry(league: league, match: m))
-                }
-            }
-        }
-        return out.sorted {
-            ($0.match.isLive ? 0 : 1, $0.match.kickoff) < ($1.match.isLive ? 0 : 1, $1.match.kickoff)
-        }
-    }
-
-    /// Every upcoming/live game involving a starred team, across all leagues.
-    var myTeamEntries: [GuideEntry] {
-        var out: [GuideEntry] = []
-        for league in visibleLeagues {
-            var pool = matches(for: league)
-            if league == .worldCup { pool += tomorrowMatches }
-            for m in pool where isFavoriteMatch(m, league: league) {
-                out.append(GuideEntry(league: league, match: m))
-            }
-        }
-        return out.sorted {
-            ($0.match.isLive ? 0 : 1, $0.match.kickoff) < ($1.match.isLive ? 0 : 1, $1.match.kickoff)
-        }
-    }
-
-    // MARK: - On-demand data (scorers, win probability)
-
-    func loadScorers() async {
-        guard scorers.isEmpty, !scorersLoading else { return }
-        scorersLoading = true
-        defer { scorersLoading = false }
-        var teamNames: [String: String] = [:]
-        for g in groups {
-            for r in g.rows { teamNames[r.id] = r.name }
-        }
-        if let result = try? await Self.fetchScorers(teamNames: teamNames) {
-            scorers = result
-        }
-    }
-
-    func loadWinProb(league: SportLeague, matchId: String) async {
-        guard let path = league.apiPath else { return }
-        let url = "https://site.api.espn.com/apis/site/v2/sports/\(path)/summary?event=\(matchId)"
-        guard let pct = try? await Self.getWinProb(url) else { return }
-        winProb[matchId] = pct
-    }
-
-    nonisolated private static func getWinProb(_ url: String) async throws -> Double? {
-        let response = try await getJSON(url, as: WinProbResponse.self)
-        return response.winprobability?.last?.homeWinPercentage
-    }
-
-    nonisolated static func fetchScorers(teamNames: [String: String]) async throws -> [Scorer] {
-        let url = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/seasons/2026/types/1/leaders?lang=en&region=us"
-        let leaders = try await getJSON(url, as: CoreLeaders.self)
-        let goals = leaders.categories?.first { $0.name == "goalsLeaders" }?.leaders ?? []
-        var out: [Scorer] = []
-        for leader in goals.prefix(12) {
-            guard let athleteRef = leader.athlete?.ref,
-                  let athleteURL = athleteRef.replacingOccurrences(of: "http://", with: "https://")
-                    .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-            else { continue }
-            guard let athlete = try? await getJSON(athleteURL, as: CoreAthlete.self) else { continue }
-            let teamId = leader.team?.ref?
-                .split(separator: "?").first
-                .flatMap { $0.split(separator: "/").last.map(String.init) } ?? ""
-            out.append(Scorer(id: athlete.id ?? UUID().uuidString,
-                              name: athlete.displayName ?? athlete.fullName ?? "—",
-                              teamName: teamNames[teamId] ?? "",
-                              goals: Int(leader.value ?? 0)))
-        }
-        return out
-    }
-
-    nonisolated static func fetchUSStandings(path: String) async throws -> [USTable] {
-        let url = "https://site.api.espn.com/apis/v2/sports/\(path)/standings"
-        let response = try await getJSON(url, as: StandingsResponse.self)
-        return (response.children ?? []).compactMap { group -> USTable? in
-            guard let name = group.name, let entries = group.standings?.entries else { return nil }
-            let rows = entries.map { entry -> USRow in
-                func stat(_ key: String) -> SBStat? {
-                    entry.stats.first { $0.name == key }
-                }
-                return USRow(id: entry.team.id ?? UUID().uuidString,
-                             name: entry.team.displayName ?? "—",
-                             logoURL: entry.team.logos?.first?.href.flatMap(URL.init(string:)),
-                             wins: Int(stat("wins")?.value ?? 0),
-                             losses: Int(stat("losses")?.value ?? 0),
-                             pct: stat("winPercent")?.displayValue ?? "—",
-                             gamesBehind: stat("gamesBehind")?.displayValue ?? "—")
-            }
-            .sorted { Double($0.pct) ?? 0 > Double($1.pct) ?? 0 }
-            return USTable(name: name, rows: rows)
-        }
+    var liveCount: Int {
+        visibleGames.filter { $0.1.isLive }.count
     }
 
     var menuTitle: String {
-        if goalAlertsEnabled, let alert = goalAlert,
+        if scoreAlertsEnabled, let alert = scoreAlert,
            Date().timeIntervalSince(alert.at) < 180 {
             return alert.text
         }
-        if let live = liveMatch {
-            let extra = liveMatches.count - 1
-            var title = "⚽️ \(live.home.abbrev) \(live.home.score ?? 0)–\(live.away.score ?? 0) \(live.away.abbrev) \(live.clock)"
-            if extra > 0 { title += " +\(extra)" }
-            return title
-        }
-        if let next = nextMatch, countdownAlertEnabled,
-           next.kickoff.timeIntervalSince(Date()) <= 600 {
-            let minutes = max(1, Int(next.kickoff.timeIntervalSince(Date()) / 60))
-            return "🔔 \(next.home.abbrev)–\(next.away.abbrev) in \(minutes)m"
-        }
-        if let (league, m) = liveOther {
+        if let (league, m) = headlineLive {
             if league == .cricket {
                 return "🏏 \(m.home.abbrev) v \(m.away.abbrev) · \(m.statusDetail.isEmpty ? "Live" : m.statusDetail)"
             }
-            return "\(league.emoji) \(m.home.abbrev) \(m.home.score ?? 0)–\(m.away.score ?? 0) \(m.away.abbrev) \(m.statusDetail)"
+            var title = "\(league.emoji) \(m.home.abbrev) \(m.home.score ?? 0)–\(m.away.score ?? 0) \(m.away.abbrev)"
+            if !m.statusDetail.isEmpty { title += " \(m.statusDetail)" }
+            let extra = liveCount - 1
+            if extra > 0 { title += " +\(extra)" }
+            return title
         }
-        if let next = nextMatch {
+        if let (league, m) = nextGame {
+            let remaining = m.kickoff.timeIntervalSince(Date())
+            if countdownAlertEnabled, remaining <= 600 {
+                let minutes = max(1, Int(remaining / 60))
+                return "🔔 \(m.home.abbrev)–\(m.away.abbrev) in \(minutes)m"
+            }
             let f = DateFormatter()
             f.timeStyle = .short
-            return "⚽️ \(next.home.abbrev)–\(next.away.abbrev) \(f.string(from: next.kickoff))"
+            return "\(league.emoji) \(m.home.abbrev)–\(m.away.abbrev) \(f.string(from: m.kickoff))"
         }
-        return "⚽️ WC26"
+        return "🥎 Matchday"
+    }
+
+    /// Cross-sport TV guide: live games plus everything else starting today.
+    var guideEntries: [GuideEntry] {
+        let cal = Calendar.current
+        return visibleGames
+            .filter { $0.1.state != .post && ($0.1.isLive || cal.isDateInToday($0.1.kickoff)) }
+            .map { GuideEntry(league: $0.0, match: $0.1) }
+            .sorted { ($0.match.isLive ? 0 : 1, $0.match.kickoff) < ($1.match.isLive ? 0 : 1, $1.match.kickoff) }
+    }
+
+    /// Every live/upcoming game involving a starred team, across all leagues.
+    var myTeamEntries: [GuideEntry] {
+        visibleGames
+            .filter { isFavoriteMatch($0.1, league: $0.0) }
+            .map { GuideEntry(league: $0.0, match: $0.1) }
+            .sorted { ($0.match.isLive ? 0 : 1, $0.match.kickoff) < ($1.match.isLive ? 0 : 1, $1.match.kickoff) }
     }
 
     // MARK: - Fetching
@@ -382,6 +273,7 @@ final class ScoreModel: ObservableObject {
         if let dates { urlString += "?dates=\(dates)" }
         let board = try await getJSON(urlString, as: Scoreboard.self)
         return board.events.compactMap(Self.match(from:))
+            .sorted { ($0.isLive ? 0 : 1, $0.kickoff) < ($1.isLive ? 0 : 1, $1.kickoff) }
     }
 
     nonisolated static func fetchDayPlusTomorrow(league: String, tomorrow: String) async throws -> [Match] {
@@ -389,11 +281,8 @@ final class ScoreModel: ObservableObject {
         async let next = fetchScoreboard(league: league, dates: tomorrow)
         let (t, n) = try await (today, next)
         let ids = Set(t.map(\.id))
-        return (t + n.filter { !ids.contains($0.id) }).sorted { $0.kickoff < $1.kickoff }
-    }
-
-    nonisolated static func fetchDay(_ yyyymmdd: String?) async throws -> [Match] {
-        try await fetchScoreboard(league: "soccer/fifa.world", dates: yyyymmdd)
+        return (t + n.filter { !ids.contains($0.id) })
+            .sorted { ($0.isLive ? 0 : 1, $0.kickoff) < ($1.isLive ? 0 : 1, $1.kickoff) }
     }
 
     nonisolated static func fetchCricket() async throws -> [LeagueSection] {
@@ -425,8 +314,6 @@ final class ScoreModel: ObservableObject {
             do {
                 board = try await getJSON(url, as: Scoreboard.self)
             } catch {
-                NSLog("WC26 cricket fetch failed for %@ (%@): %@",
-                      league.name ?? "?", id, String(describing: error))
                 continue
             }
             let matches = board.events.compactMap(Self.match(from:))
@@ -440,69 +327,31 @@ final class ScoreModel: ObservableObject {
         return sections
     }
 
-    nonisolated static func fetchBracket() async throws -> [BracketRound] {
-        let matches = try await fetchScoreboard(league: "soccer/fifa.world", dates: "20260628-20260720")
-        let grouped = Dictionary(grouping: matches, by: \.roundSlug)
-        return grouped
-            .map { slug, list in
-                BracketRound(slug: slug,
-                             title: RoundNames.title(for: slug),
-                             matches: list.sorted { $0.kickoff < $1.kickoff })
-            }
-            .sorted { ($0.matches.first?.kickoff ?? .distantFuture) < ($1.matches.first?.kickoff ?? .distantFuture) }
-    }
-
-    nonisolated static func fetchStandings() async throws -> [GroupTable] {
-        let urlString = "https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?season=2026"
-        let response = try await getJSON(urlString, as: StandingsResponse.self)
-        return (response.children ?? []).compactMap { group -> GroupTable? in
+    nonisolated static func fetchStandings(path: String) async throws -> [USTable] {
+        let url = "https://site.api.espn.com/apis/v2/sports/\(path)/standings"
+        let response = try await getJSON(url, as: StandingsResponse.self)
+        return (response.children ?? []).compactMap { group -> USTable? in
             guard let name = group.name, let entries = group.standings?.entries else { return nil }
-            let rows = entries.map { entry -> GroupRow in
-                func stat(_ key: String) -> Int {
-                    Int(entry.stats.first { $0.name == key }?.value ?? 0)
+            let rows = entries.map { entry -> USRow in
+                func stat(_ key: String) -> SBStat? {
+                    entry.stats.first { $0.name == key }
                 }
-                let gd = entry.stats.first { $0.name == "pointDifferential" }?.displayValue ?? "0"
-                return GroupRow(id: entry.team.id ?? UUID().uuidString,
-                                name: entry.team.displayName ?? "—",
-                                logoURL: entry.team.logos?.first?.href.flatMap(URL.init(string:)),
-                                rank: stat("rank"),
-                                played: stat("gamesPlayed"),
-                                wins: stat("wins"),
-                                draws: stat("ties"),
-                                losses: stat("losses"),
-                                goalDiff: gd,
-                                points: stat("points"))
+                return USRow(id: entry.team.id ?? UUID().uuidString,
+                             name: entry.team.displayName ?? "—",
+                             logoURL: entry.team.logos?.first?.href.flatMap(URL.init(string:)),
+                             wins: Int(stat("wins")?.value ?? 0),
+                             losses: Int(stat("losses")?.value ?? 0),
+                             pct: stat("winPercent")?.displayValue ?? "—",
+                             gamesBehind: stat("gamesBehind")?.displayValue ?? "—")
             }
-            return GroupTable(name: name, rows: rows.sorted { $0.rank < $1.rank })
+            .sorted { (Double($0.pct) ?? 0, $0.wins) > (Double($1.pct) ?? 0, $1.wins) }
+            return USTable(name: name, rows: rows)
         }
-        .sorted { $0.name < $1.name }
     }
 
-    nonisolated static func fetchSummary(eventId: String) async throws -> [MatchEvent] {
-        let urlString = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=\(eventId)"
-        let response = try await getJSON(urlString, as: SummaryResponse.self)
-        return (response.keyEvents ?? []).compactMap { event -> MatchEvent? in
-            let typeSlug = event.type?.type ?? ""
-            let kind: MatchEventKind
-            if event.scoringPlay == true {
-                if typeSlug.contains("own") { kind = .ownGoal }
-                else if typeSlug.contains("penalty") { kind = .penalty }
-                else { kind = .goal }
-            } else if typeSlug == "yellow-card" {
-                kind = .yellow
-            } else if typeSlug == "red-card" {
-                kind = .red
-            } else {
-                return nil
-            }
-            let player = event.participants?.first?.athlete?.displayName
-                ?? event.shortText ?? event.type?.text ?? "—"
-            return MatchEvent(id: event.id ?? UUID().uuidString,
-                              kind: kind,
-                              minute: event.clock?.displayValue ?? "",
-                              player: player,
-                              teamId: event.team?.id ?? "")
-        }
+    nonisolated private static func getWinProb(_ url: String) async throws -> Double? {
+        let response = try await getJSON(url, as: WinProbResponse.self)
+        return response.winprobability?.last?.homeWinPercentage
     }
 
     nonisolated static func match(from event: SBEvent) -> Match? {
@@ -517,12 +366,15 @@ final class ScoreModel: ObservableObject {
         func side(_ c: SBCompetitor) -> TeamSide {
             let site = (c.team.links?.first { $0.rel?.contains("clubhouse") == true }
                         ?? c.team.links?.first)?.href.flatMap(URL.init(string:))
+            // Some leagues (NCAA softball) return a generic placeholder crest;
+            // fall back to the abbreviation rather than showing a blank disc.
+            let logo = c.team.logo.flatMap { $0.hasSuffix("/logos/default.png") ? nil : $0 }
             return TeamSide(id: c.team.id ?? c.team.displayName,
                             name: c.team.displayName,
                             abbrev: c.team.abbreviation ?? String(c.team.displayName.prefix(3)).uppercased(),
                             score: c.score.flatMap(Int.init),
                             scoreText: c.score?.isEmpty == false ? c.score : nil,
-                            logoURL: c.team.logo.flatMap(URL.init(string:)),
+                            logoURL: logo.flatMap(URL.init(string:)),
                             winner: c.winner ?? false,
                             form: c.form,
                             siteURL: site,
@@ -550,7 +402,6 @@ final class ScoreModel: ObservableObject {
                      venue: comp.venue?.fullName ?? "",
                      city: comp.venue?.address?.city ?? "",
                      networks: networks,
-                     roundSlug: event.season?.slug ?? "group-stage",
                      gamecastURL: gamecast)
     }
 }
@@ -558,32 +409,32 @@ final class ScoreModel: ObservableObject {
 // MARK: - Calendar export
 
 enum CalendarExport {
-    static func icsString(for match: Match) -> String {
+    static func icsString(for match: Match, league: SportLeague) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = TimeZone(identifier: "UTC")
         f.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
         let start = f.string(from: match.kickoff)
-        let end = f.string(from: match.kickoff.addingTimeInterval(2 * 3600))
+        let end = f.string(from: match.kickoff.addingTimeInterval(3 * 3600))
         let tv = match.networks.isEmpty ? "" : "TV: \(match.networks.joined(separator: "\\, "))"
         let location = [match.venue, match.city].filter { !$0.isEmpty }
             .joined(separator: "\\, ")
         return """
         BEGIN:VCALENDAR
         VERSION:2.0
-        PRODID:-//WorldCup26//EN
+        PRODID:-//Matchday//EN
         BEGIN:VEVENT
-        UID:wc26-\(match.id)@worldcup26.local
+        UID:matchday-\(match.id)@matchday.local
         DTSTAMP:\(start)
         DTSTART:\(start)
         DTEND:\(end)
-        SUMMARY:⚽️ \(match.home.name) vs \(match.away.name)
+        SUMMARY:\(league.emoji) \(match.home.name) vs \(match.away.name)
         LOCATION:\(location)
         DESCRIPTION:\(tv)
         BEGIN:VALARM
         TRIGGER:-PT10M
         ACTION:DISPLAY
-        DESCRIPTION:Kickoff in 10 minutes
+        DESCRIPTION:Starts in 10 minutes
         END:VALARM
         END:VEVENT
         END:VCALENDAR
