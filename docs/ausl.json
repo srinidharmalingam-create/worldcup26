@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-25T17:15:00Z",
+ "updated": "2026-07-25T18:07:32Z",
  "league": "Athletes Unlimited Softball League",
  "games": [
   {
@@ -1897,13 +1897,13 @@
     "name": "Talons",
     "abbrev": "UTA",
     "city": "Salt Lake City",
-    "score": 0
+    "score": 1
    },
    "away": {
     "name": "Bandits",
     "abbrev": "CHI",
     "city": "Chicago",
-    "score": 0
+    "score": 1
    },
    "venue": "Davis Diamond",
    "city": "College Station",
