@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-26T19:47:16Z",
+ "updated": "2026-07-26T20:38:35Z",
  "league": "Athletes Unlimited Softball League",
  "games": [
   {
@@ -1917,50 +1917,24 @@
   {
    "id": "990",
    "dateIso": "2026-07-26T14:00:00-04:00",
-   "state": "live",
-   "status": "Live",
+   "state": "post",
+   "status": "Final",
    "home": {
     "name": "Bandits",
     "abbrev": "CHI",
     "city": "Chicago",
-    "score": 0
+    "score": 1
    },
    "away": {
     "name": "Talons",
     "abbrev": "UTA",
     "city": "Salt Lake City",
-    "score": 5
+    "score": 6
    },
    "venue": "Davis Diamond",
    "city": "College Station",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
-   ],
-   "link": "https://www.espn.com/watch/",
-   "postseason": true
-  },
-  {
-   "id": "991",
-   "dateIso": "2026-07-27T19:00:00-04:00",
-   "state": "pre",
-   "status": "Scheduled",
-   "home": {
-    "name": "Talons",
-    "abbrev": "UTA",
-    "city": "Salt Lake City",
-    "score": null
-   },
-   "away": {
-    "name": "Bandits",
-    "abbrev": "CHI",
-    "city": "Chicago",
-    "score": null
-   },
-   "venue": "Davis Diamond",
-   "city": "College Station",
-   "networks": [
-    "ESPN2",
     "ESPN Deportes"
    ],
    "link": "https://www.espn.com/watch/",
