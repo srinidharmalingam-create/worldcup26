@@ -1,5 +1,5 @@
 {
- "updated": "2026-08-05T19:58:20Z",
+ "updated": "2026-08-05T21:02:45Z",
  "league": "Athletes Unlimited Softball League",
  "games": [
   {
@@ -22,9 +22,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/player/_/id/e5a0c9de-7a45-49fc-bcee-a987e43e3dc0",
+   "link": "https://www.youtube.com/watch?v=oss8CgcwZo4&list=PLZEwWow4HHzM&index=74",
    "postseason": false
   },
   {
@@ -47,9 +48,10 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssports.com/watch/livestream",
+   "link": "https://www.youtube.com/watch?v=xcMahmuWpd0&list=PLZEwWow4HHzM&index=76",
    "postseason": false
   },
   {
@@ -72,9 +74,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/player/_/id/780d86dd-d4dd-4568-add8-253f20ec750c",
+   "link": "https://www.youtube.com/watch?v=VshJJOUm5b0&list=PLZEwWow4HHzM&index=75",
    "postseason": false
   },
   {
@@ -97,9 +100,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "ESPNU"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=Wp2V1jIZg_s&list=PLZEwWow4HHzM&index=71",
    "postseason": false
   },
   {
@@ -122,9 +126,10 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/player/_/id/5a60045c-bb9b-41bb-8d51-047634408189#bucketId=2",
+   "link": "https://www.youtube.com/watch?v=TgEh_cJzjJ0&list=PLZEwWow4HHzM&index=73",
    "postseason": false
   },
   {
@@ -147,9 +152,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/video/ausl-live-volts-vs-spark-205007",
+   "link": "https://www.youtube.com/watch?v=2G4PYwK6iEM&list=PLZEwWow4HHzM&index=72",
    "postseason": false
   },
   {
@@ -172,9 +178,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "ESPNU"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=kQfSpE71F5Q&list=PLZEwWow4HHzM&index=63",
    "postseason": false
   },
   {
@@ -197,9 +204,10 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=rq8RUtK7VA8&list=PLZEwWow4HHzM&index=70",
    "postseason": false
   },
   {
@@ -222,9 +230,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/video/ausl-live-volts-vs-spark-205008",
+   "link": "https://www.youtube.com/watch?v=EZd0EaN4q04&list=PLZEwWow4HHzM&index=69",
    "postseason": false
   },
   {
@@ -247,9 +256,10 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=4l45pSFDPDw&list=PLZEwWow4HHzM&index=67",
    "postseason": false
   },
   {
@@ -272,10 +282,11 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "ESPN2",
     "ESPN Deportes"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=a2C_lWzcFxk&list=PLZEwWow4HHzM&index=64",
    "postseason": false
   },
   {
@@ -298,9 +309,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=tRBSFXlL8Ig&list=PLZEwWow4HHzM&index=66",
    "postseason": false
   },
   {
@@ -323,9 +335,10 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=h8w8fqylIa4&list=PLZEwWow4HHzM&index=62",
    "postseason": false
   },
   {
@@ -348,9 +361,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "MLB Network"
    ],
-   "link": "https://www.mlb.com/network/live",
+   "link": "https://www.youtube.com/watch?v=CeaNQ9BGPZo&list=PLZEwWow4HHzM&index=61",
    "postseason": false
   },
   {
@@ -373,9 +387,10 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=O1ZBBWUbINM&list=PLZEwWow4HHzM&index=65",
    "postseason": false
   },
   {
@@ -398,9 +413,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/player/_/id/eb645409-b064-48e1-b181-fec05b8af85b",
+   "link": "https://www.youtube.com/watch?v=3i9sVMkzfzU&list=PLZEwWow4HHzM&index=60",
    "postseason": false
   },
   {
@@ -423,9 +439,10 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=OT6XqYey3Q8&list=PLZEwWow4HHzM&index=59",
    "postseason": false
   },
   {
@@ -448,9 +465,10 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=qvf3FCE7hL4&list=PLZEwWow4HHzM&index=58",
    "postseason": false
   },
   {
@@ -474,7 +492,8 @@
    "city": "Hillsboro",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/12e8ebc1-83d2-44c3-8170-0d2eef7f7e01",
    "postseason": false
@@ -499,9 +518,10 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
+    "YouTube",
     "ESPN"
    ],
-   "link": "https://www.espn.com/watch/player/_/id/2eef6d75-b77f-4b7f-ad23-4a74fcecdd3c",
+   "link": "https://www.youtube.com/watch?v=cDJncQkxv3Y&list=PLZEwWow4HHzM&index=57",
    "postseason": false
   },
   {
@@ -524,9 +544,10 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=Bhq7-2w1wwk&list=PLZEwWow4HHzM&index=54",
    "postseason": false
   },
   {
@@ -549,9 +570,10 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/ausl",
+   "link": "https://www.youtube.com/watch?v=h0ezquCZ0ZQ&list=PLZEwWow4HHzM&index=55",
    "postseason": false
   },
   {
@@ -574,9 +596,10 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
+    "YouTube",
     "ESPN"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=THK3fOmjG6M&list=PLZEwWow4HHzM&index=53",
    "postseason": false
   },
   {
@@ -599,9 +622,10 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/ausl",
+   "link": "https://www.youtube.com/watch?v=weqku0iO4Sc&list=PLZEwWow4HHzM&index=52",
    "postseason": false
   },
   {
@@ -624,9 +648,10 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
+    "YouTube",
     "ESPN"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=5iCxCmZm4TQ&list=PLZEwWow4HHzM&index=51",
    "postseason": false
   },
   {
@@ -649,9 +674,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=9t4nGsRhLbM&list=PLZEwWow4HHzM&index=50",
    "postseason": false
   },
   {
@@ -674,7 +700,8 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -699,9 +726,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=WkcasuDxpuM&list=PLZEwWow4HHzM&index=48",
    "postseason": false
   },
   {
@@ -724,9 +752,10 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=MEvnI9SWZ7k&list=PLZEwWow4HHzM&index=47",
    "postseason": false
   },
   {
@@ -750,7 +779,8 @@
    "city": "Durham",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -775,9 +805,10 @@
    "venue": "Durham Bulls Athletic Park",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=rceqwDc4lwc",
    "postseason": false
   },
   {
@@ -801,7 +832,8 @@
    "city": "Round Rock",
    "networks": [
     "ESPNU",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -826,9 +858,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=G8XGScv5f1g&list=PLZEwWow4HHzM&index=43",
    "postseason": false
   },
   {
@@ -851,9 +884,10 @@
    "venue": "Durham Bulls Athletic Park",
    "city": "Durham",
    "networks": [
+    "YouTube",
     "ESPN"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=fXi-4sCIoqI&list=PLZEwWow4HHzM&index=44",
    "postseason": false
   },
   {
@@ -876,9 +910,10 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/ausl",
+   "link": "https://www.youtube.com/watch?v=jR0GA_k0q2o&list=PLZEwWow4HHzM&index=42",
    "postseason": false
   },
   {
@@ -901,9 +936,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "MLB Network"
    ],
-   "link": "https://www.mlb.com/network/live",
+   "link": "https://www.youtube.com/watch?v=dfEJEyTdJlA&list=PLZEwWow4HHzM&index=40",
    "postseason": false
   },
   {
@@ -927,7 +963,8 @@
    "city": "Round Rock",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -952,9 +989,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=0nHVnhxXWNI&list=PLZEwWow4HHzM&index=39",
    "postseason": false
   },
   {
@@ -977,7 +1015,8 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1002,9 +1041,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=WcINP1OiuII&list=PLZEwWow4HHzM&index=37",
    "postseason": false
   },
   {
@@ -1027,9 +1067,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=pEylGEONVgU&list=PLZEwWow4HHzM&index=36",
    "postseason": false
   },
   {
@@ -1052,9 +1093,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/ausl",
+   "link": "https://www.youtube.com/watch?v=RDh1WSDKmws&list=PLZEwWow4HHzM&index=35",
    "postseason": false
   },
   {
@@ -1103,9 +1145,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "MLB.tv"
    ],
-   "link": "https://www.mlb.com/ausl",
+   "link": "https://www.youtube.com/watch?v=LjXau8gxuLI&list=PLZEwWow4HHzM&index=34",
    "postseason": false
   },
   {
@@ -1128,9 +1171,10 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=a4kUBDYm20U&list=PLZEwWow4HHzM&index=32",
    "postseason": false
   },
   {
@@ -1153,9 +1197,10 @@
    "venue": "Dumke Family Softball Stadium",
    "city": "Salt Lake City",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=yTHOS2CVXK4&list=PLZEwWow4HHzM&index=31",
    "postseason": false
   },
   {
@@ -1178,7 +1223,8 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
-    "ESPN"
+    "ESPN",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1203,7 +1249,8 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://espn.com/watch",
    "postseason": false
@@ -1228,7 +1275,8 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
-    "ESPN"
+    "ESPN",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1253,7 +1301,8 @@
    "venue": "The Stadium at Parkway Bank Sports Complex",
    "city": "Rosemont",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1278,9 +1327,10 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
+    "YouTube",
     "ESPN2"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=mud2XjGq85k&list=PLZEwWow4HHzM&index=27",
    "postseason": false
   },
   {
@@ -1303,9 +1353,10 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=HJUleDDESZc&list=PLZEwWow4HHzM&index=26",
    "postseason": false
   },
   {
@@ -1328,9 +1379,10 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
+    "YouTube",
     "ESPNU"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=iCmWvyg2SzU&list=PLZEwWow4HHzM&index=25",
    "postseason": false
   },
   {
@@ -1353,9 +1405,10 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
+    "YouTube",
     "CBS Sports Network"
    ],
-   "link": "https://www.cbssportsnetwork.com/",
+   "link": "https://www.youtube.com/watch?v=sLjoeYy4Q5s&list=PLZEwWow4HHzM&index=23",
    "postseason": false
   },
   {
@@ -1378,9 +1431,10 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
+    "YouTube",
     "ESPNU"
    ],
-   "link": "https://www.espn.com/watch/",
+   "link": "https://www.youtube.com/watch?v=o42K-qGdX_c&list=PLZEwWow4HHzM&index=24",
    "postseason": false
   },
   {
@@ -1403,7 +1457,8 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
-    "CBS Sports Network"
+    "CBS Sports Network",
+    "YouTube"
    ],
    "link": "https://www.cbssportsnetwork.com/",
    "postseason": false
@@ -1428,7 +1483,8 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
-    "ESPN"
+    "ESPN",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/c2b13240-8c5d-4c62-a3fa-b6f54a0ca416#bucketId=2",
    "postseason": false
@@ -1453,7 +1509,8 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
-    "MLB.tv"
+    "MLB.tv",
+    "YouTube"
    ],
    "link": "https://www.mlb.com/video/ausl-live-talons-vs-spark-205336",
    "postseason": false
@@ -1478,7 +1535,8 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1503,7 +1561,8 @@
    "venue": "Tom Heath Field",
    "city": "Oklahoma City",
    "networks": [
-    "MLB Network"
+    "MLB Network",
+    "YouTube"
    ],
    "link": "https://www.mlb.com/network/live",
    "postseason": false
@@ -1529,7 +1588,8 @@
    "city": "Round Rock",
    "networks": [
     "ESPN2",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1555,7 +1615,8 @@
    "city": "Round Rock",
    "networks": [
     "ESPN2",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": false
@@ -1580,7 +1641,8 @@
    "venue": "Dell Diamond",
    "city": "Round Rock",
    "networks": [
-    "ESPNU"
+    "ESPNU",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/7a8b9c79-30fc-497f-9f63-28d7fecbbf38",
    "postseason": false
@@ -1605,7 +1667,8 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
-    "MLB.tv"
+    "MLB.tv",
+    "YouTube"
    ],
    "link": "https://www.mlb.com/ausl",
    "postseason": false
@@ -1630,7 +1693,8 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
-    "CBS Sports Network"
+    "CBS Sports Network",
+    "YouTube"
    ],
    "link": "https://www.cbssportsnetwork.com/",
    "postseason": false
@@ -1655,7 +1719,8 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
-    "CBS Sports Network"
+    "CBS Sports Network",
+    "YouTube"
    ],
    "link": "https://www.cbssportsnetwork.com/",
    "postseason": false
@@ -1680,7 +1745,8 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
-    "MLB Network"
+    "MLB Network",
+    "YouTube"
    ],
    "link": "https://www.mlb.com/network/live",
    "postseason": false
@@ -1706,7 +1772,8 @@
    "city": "Hillsboro",
    "networks": [
     "ESPN2",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/fb351d10-9678-4d1c-979a-98ac8c16ffba",
    "postseason": false
@@ -1731,7 +1798,8 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/c5a618cf-91ed-4a92-ae3e-1caed0d09cde",
    "postseason": false
@@ -1756,7 +1824,8 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
-    "CBS Sports Network"
+    "CBS Sports Network",
+    "YouTube"
    ],
    "link": "https://www.cbssportsnetwork.com/",
    "postseason": false
@@ -1782,7 +1851,8 @@
    "city": "Hillsboro",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/67960613-3f79-4aa6-9598-cbf9bf548612",
    "postseason": false
@@ -1807,7 +1877,8 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
-    "ESPN"
+    "ESPN",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/71e00a30-69b1-485d-baa9-5f6743b2f4f4",
    "postseason": false
@@ -1832,7 +1903,8 @@
    "venue": "Hillsboro Ballpark",
    "city": "Hillsboro",
    "networks": [
-    "MLB Network"
+    "MLB Network",
+    "YouTube"
    ],
    "link": "https://www.mlb.com/network/live",
    "postseason": false
@@ -1857,7 +1929,8 @@
    "venue": "Smith Family Stadium",
    "city": "Durham",
    "networks": [
-    "ESPN2"
+    "ESPN2",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/4503dab8-60e9-4054-8fa4-6b7b591dce22",
    "postseason": false
@@ -1883,7 +1956,8 @@
    "city": "College Station",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/player/_/id/3714f3d3-4bae-4cfb-9e70-2a43d676cada",
    "postseason": true
@@ -1909,7 +1983,8 @@
    "city": "College Station",
    "networks": [
     "ABC",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://abc.com/watch-live/",
    "postseason": true
@@ -1935,7 +2010,8 @@
    "city": "College Station",
    "networks": [
     "ESPN",
-    "ESPN Deportes"
+    "ESPN Deportes",
+    "YouTube"
    ],
    "link": "https://www.espn.com/watch/",
    "postseason": true
